@@ -1,6 +1,6 @@
 // Service worker: app werkt offline en laadt snel.
-const VERSION = 'natuur-v1';
-const SHELL = ['./', 'index.html', 'styles.css?v=4', 'app.js?v=4', 'data/species.json', 'manifest.webmanifest', 'icons/icon.svg', 'icons/apple-touch-icon.png'];
+const VERSION = 'natuur-v2';
+const SHELL = ['./', 'index.html', 'styles.css?v=8', 'app.js?v=8', 'data/species.json', 'manifest.webmanifest', 'icons/icon.svg', 'icons/apple-touch-icon.png'];
 const IMG_CACHE = 'natuur-img';
 const IMG_MAX = 1500;
 
