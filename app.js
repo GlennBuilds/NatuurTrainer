@@ -54,6 +54,11 @@ const today = () => new Date().toISOString().slice(0, 10);
 const plural = (n, one, more) => `${n} ${n === 1 ? one : more}`;
 
 let SPECIES = [], BY_ID = {}, DATA_DATE = '';
+let INFO = null, infoP = null;
+function loadInfo() {
+  infoP ||= fetch('data/info.json?v=1').then(r => r.json()).then(d => (INFO = d)).catch(() => { infoP = null; return null; });
+  return infoP;
+}
 
 function pool(settings = store.settings) {
   return SPECIES.filter(s => settings.cats.includes(s.cat) && (settings.region === 'nl' || s.bestObs > 0));
@@ -239,8 +244,7 @@ function renderDetail(s) {
         ${rarity(s)}
       </div>
       <div class="panel tip"><h3>Zo herken je hem</h3><p>${esc(s.tip)}</p></div>
-      ${s.wiki ? `<div class="panel"><h3>Over deze soort</h3><p>${esc(s.wiki.t)}</p>
-        <div class="src">Bron: <a href="${esc(s.wiki.u)}" target="_blank" rel="noopener">Wikipedia</a>, CC BY-SA</div></div>` : ''}
+      <div class="info" data-info="${s.id}" data-links="1"></div>
       <div class="block" style="margin-top:28px">
         <h2 class="h2">Jouw voortgang</h2>
         <div class="list">
@@ -257,12 +261,88 @@ function renderDetail(s) {
   </main>`;
   window.scrollTo(0, 0);
   onScroll();
+  fillInfo();
   const gal = $('#gal'), dots = $('#dots');
   if (gal && dots) gal.addEventListener('scroll', () => {
     const i = Math.round(gal.scrollLeft / gal.clientWidth);
     [...dots.children].forEach((d, k) => d.classList.toggle('on', k === i));
   }, { passive: true });
 }
+// ---------- Meer over een soort (kenmerken, seizoen, lijkt op) ----------
+const MONTHS = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+
+function fillInfo() {
+  document.querySelectorAll('[data-info]:not(.filled)').forEach(el => {
+    const draw = () => {
+      if (!el.isConnected) return;
+      el.classList.add('filled');
+      el.innerHTML = infoHTML(BY_ID[el.dataset.info], INFO?.[el.dataset.info], el.dataset.links === '1');
+    };
+    if (INFO) draw();
+    else { el.innerHTML = '<p class="info-wait">Meer informatie laden…</p>'; loadInfo().then(draw); }
+  });
+}
+
+function seasonText(m) {
+  const hi = m.map(v => v >= 50);
+  if (hi.filter(Boolean).length >= 10) return 'Het hele jaar door te zien.';
+  // aaneengesloten perioden (ook over de jaargrens heen)
+  const start = hi.findIndex((v, i) => !v && hi[(i + 1) % 12]) + 1;
+  const runs = [];
+  for (let k = 0; k < 12; k++) {
+    const i = (start + k) % 12;
+    if (!hi[i]) continue;
+    const last = runs[runs.length - 1];
+    if (last && (last[1] + 1) % 12 === i) last[1] = i; else runs.push([i, i]);
+  }
+  const part = ([a, b]) => a === b ? `in ${MONTHS[a]}` : `van ${MONTHS[a]} tot en met ${MONTHS[b]}`;
+  return `Meest waargenomen ${runs.map(part).join(' en ')}.`;
+}
+
+function seasonHTML(m) {
+  const now = new Date().getMonth();
+  const v = m[now];
+  const nowTxt = v >= 50 ? 'een goede tijd om hem te zien' : v >= 20 ? 'af en toe te zien' : 'weinig gezien';
+  return `<section class="panel season">
+    <h3>Wanneer te zien</h3>
+    <p>${seasonText(m)} Nu, in ${MONTHS[now]}: ${nowTxt}.</p>
+    <div class="months" role="img" aria-label="Waarnemingen per maand, hoogste in ${MONTHS[m.indexOf(100)]}">
+      ${m.map((x, i) => `<div class="mo ${i === now ? 'now' : ''}" title="${MONTHS[i]}: ${x}% van de drukste maand"><i style="height:${Math.max(x, 3)}%"></i><span>${MONTHS[i][0].toUpperCase()}</span></div>`).join('')}
+    </div>
+    <div class="src">Waarnemingen per maand in Nederland, via iNaturalist</div>
+  </section>`;
+}
+
+function similarHTML(sim, links) {
+  const ours = sim.filter(x => x.id && BY_ID[x.id]).map(x => BY_ID[x.id]);
+  const other = sim.filter(x => !x.id);
+  if (!ours.length && !other.length) return '';
+  const tag = links ? 'a' : 'div';
+  return `<section class="panel similar">
+    <h3>Wordt vaak verward met</h3>
+    ${ours.length ? `<div class="sim-row">${ours.map(o => `<${tag} class="sim" ${links ? `href="#/soort/${o.id}"` : ''}>
+      <img src="${img(o, 0, 'medium')}" alt="" loading="lazy"><span>${esc(o.nl)}</span></${tag}>`).join('')}</div>` : ''}
+    ${other.length ? `<p class="sim-other">${ours.length ? 'Ook: ' : ''}${other.map(o => `${esc(o.n)} <i>(${esc(o.s)})</i>`).join(', ')}</p>` : ''}
+    <div class="src">Op basis van verbeterde determinaties op iNaturalist</div>
+  </section>`;
+}
+
+function infoHTML(s, inf, links) {
+  if (!s) return '';
+  const sec = inf?.sec || [];
+  const panel = x => `<section class="panel"><h3>${esc(x.h)}</h3><p>${esc(x.t)}</p></section>`;
+  const pick = h => sec.filter(x => x.h === h).map(panel).join('');
+  const rest = sec.filter(x => !['Kenmerken', 'Verschil met lijkende soorten'].includes(x.h)).map(panel).join('');
+  return `
+    ${s.wiki ? `<section class="panel"><h3>Over deze soort</h3><p>${esc(s.wiki.t)}</p></section>` : ''}
+    ${pick('Kenmerken')}
+    ${inf?.sim ? similarHTML(inf.sim, links) : ''}
+    ${pick('Verschil met lijkende soorten')}
+    ${inf?.m ? seasonHTML(inf.m) : ''}
+    ${rest}
+    ${s.wiki ? `<p class="info-src">Teksten van <a href="${esc(s.wiki.u)}" target="_blank" rel="noopener">Wikipedia</a> (CC BY-SA), soms ingekort.</p>` : ''}`;
+}
+
 function rarity(s) {
   const sorted = SPECIES.filter(x => x.cat === s.cat).map(x => x.nlObs).sort((a, b) => b - a);
   const rank = sorted.indexOf(s.nlObs) / sorted.length;
@@ -417,14 +497,14 @@ function closeSession() {
   setTimeout(() => { sh.hidden = true; sh.innerHTML = ''; document.body.classList.remove('locked'); S = null; route(); }, 260);
 }
 
-function frame(stage, foot = '', { two = false, scroll = false } = {}) {
+function frame(stage, foot = '', { two = false, scroll = false, cls = '' } = {}) {
   const total = S.steps.length;
   $('#sheet').innerHTML = `
     <div class="s-top">
       <button class="s-close" data-act="close" aria-label="Stoppen">${ICON.close}</button>
       <div class="s-bar" role="progressbar" aria-valuenow="${S.i}" aria-valuemax="${total}"><i style="width:${100 * Math.min(S.i, total) / total}%"></i></div>
     </div>
-    <div class="s-body ${scroll ? 'scroll' : ''}">${stage}</div>
+    <div class="s-body ${scroll ? 'scroll' : ''} ${cls}">${stage}</div>
     <div class="s-foot ${two ? 'two' : ''}">${foot}</div>`;
 }
 
@@ -449,8 +529,11 @@ function renderStep() {
     frame(`<div class="stage">
       ${photo(sp, st.photo, { tag: '<span class="cat new">Nieuwe soort</span>', cycle: true })}
       <h2 class="q-title">${esc(sp.nl)}<small>${esc(sp.sci)}</small></h2>
-      <div class="tipbox">${esc(sp.tip)}</div></div>`,
-      `<button class="btn" data-act="next">Volgende</button>`);
+      <div class="tipbox">${esc(sp.tip)}</div>
+      <button class="more-hint" data-act="more">Meer over de ${esc(sp.nl.toLowerCase())}<svg viewBox="0 0 14 8"><path d="M1.5 1.5l5.5 5 5.5-5"/></svg></button></div>
+      <div class="info" data-info="${sp.id}"></div>`,
+      `<button class="btn" data-act="next">Volgende</button>`, { cls: 'intro' });
+    fillInfo();
   } else if (st.type === 'card') {
     frame(`<div class="stage">
       ${photo(sp, st.photo, { tag: catTag(sp), cycle: true })}
@@ -572,6 +655,7 @@ document.addEventListener('click', e => {
     case 'close': closeSession(); break;
     case 'close-to': e.preventDefault(); { const h = t.getAttribute('href'); closeSession(); setTimeout(() => go(h), 280); } break;
     case 'next': next(); break;
+    case 'more': { const b = $('.s-body'); const inf = b.querySelector('.info'); b.scrollTo({ top: inf.getBoundingClientRect().top - b.getBoundingClientRect().top + b.scrollTop + 6, behavior: 'smooth' }); break; }
     case 'answer': answer(t.dataset.id); break;
     case 'dontknow': answer(null); break;
     case 'flip': flip(); break;
@@ -611,5 +695,6 @@ window.addEventListener('hashchange', route);
     return;
   }
   route();
+  setTimeout(loadInfo, 1200);
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
 })();

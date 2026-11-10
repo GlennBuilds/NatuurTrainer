@@ -5,6 +5,10 @@ Haalt per soort op:
 - iNaturalist: taxon-id, verwantschap (voor lastige afleiders), foto's met open licentie
 - iNaturalist: aantal waarnemingen in Nederland en binnen 15 km rond Best
 - Nederlandse Wikipedia: korte introductietekst
+En apart in data/info.json (wordt pas in de app geladen als het nodig is):
+- Wikipedia-secties zoals kenmerken, leefgebied, leefwijze en voortplanting
+- iNaturalist: waarnemingen per maand in Nederland (wanneer te zien)
+- iNaturalist: soorten waarmee hij het vaakst verward wordt
 
 Gebruik:  python3 scripts/bouw_data.py          (gebruikt cache waar mogelijk)
           python3 scripts/bouw_data.py --vers   (alles opnieuw ophalen)
@@ -23,6 +27,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "data" / "soorten.txt"
 OUT = ROOT / "data" / "species.json"
+INFO = ROOT / "data" / "info.json"
 CACHE = ROOT / "scripts" / ".cache.json"
 
 UA = "NatuurTrainer/1.0 (persoonlijke leer-app)"
@@ -37,7 +42,8 @@ if CACHE.exists() and "--vers" not in sys.argv:
 _last = [0.0]
 
 
-def get(url):
+def get(url, soft=False):
+    """soft=True: bij blijvende serverfout None teruggeven in plaats van stoppen."""
     if url in cache:
         return cache[url]
     wait = (2.0 if "wikipedia" in url else 1.05) - (time.time() - _last[0])
@@ -50,6 +56,10 @@ def get(url):
                 data = json.loads(r.read().decode())
             break
         except urllib.error.HTTPError as e:
+            if soft and e.code >= 500 and attempt >= 1:
+                print(f"  ! {e} — overgeslagen", file=sys.stderr)
+                _last[0] = time.time()
+                return None
             retry = int(e.headers.get("Retry-After") or 0)
             pause = max(retry, 10 * (attempt + 1))
             print(f"  ! {e} — over {pause}s opnieuw ({attempt + 1})", file=sys.stderr)
@@ -187,6 +197,86 @@ def wiki(titles):
     return result
 
 
+# Welke Wikipedia-kopjes we tonen, in deze volgorde. Eerste passende kop wint.
+SECTIONS = [
+    ("Kenmerken", ("kenmerk", "determinatie", "beschrijving", "uiterlijk", "morfologie", "herkenning", "bouw")),
+    ("Verschil met lijkende soorten", ("onderscheid", "gelijkende", "verwarring", "verwisseling")),
+    ("Leefgebied", ("verspreiding", "habitat", "leefgebied", "voorkomen", "standplaats", "biotoop")),
+    ("Leefwijze", ("leefwijze", "levenswijze", "gedrag", "voedsel", "ecologie", "waardplant")),
+    ("Voortplanting", ("voortplanting", "levenscyclus", "ontwikkeling", "bloei", "broed", "nest")),
+    ("Goed om te weten", ("toxiciteit", "giftig", "eetba", "bescherming", "bedreiging", "gebruik", "toepassing", "betekenis voor de mens")),
+]
+SKIP = ("taxonomie", "naamgeving", "etymologie", "externe link", "bron", "referentie", "zie ook", "afbeelding", "galerij", "literatuur", "ondersoort", "synoniem")
+
+
+def trim(text, limit):
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= limit:
+        return text
+    out = ""
+    for s in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", text):
+        if len(out) + len(s) > limit and out:
+            break
+        out += (" " if out else "") + s
+    return out
+
+
+def wiki_sections(title):
+    """Opgegeven Wikipedia-artikel opknippen in de kopjes uit SECTIONS."""
+    params = {"action": "query", "format": "json", "prop": "extracts", "explaintext": 1,
+              "exsectionformat": "wiki", "redirects": 1, "titles": title}
+    d = get("https://nl.wikipedia.org/w/api.php?" + urllib.parse.urlencode(params))
+    pages = list(d.get("query", {}).get("pages", {}).values())
+    text = (pages[0].get("extract") or "") if pages else ""
+    parts = re.split(r"^(=={1,4}) ?(.*?) ?={2,5}\s*$", text, flags=re.M)
+    heads = []  # (niveau, kop, tekst)
+    for i in range(1, len(parts) - 2, 3):
+        heads.append((len(parts[i]), parts[i + 1].strip(), parts[i + 2].strip()))
+    out, taken = [], set()
+    for label, keys in SECTIONS:
+        for k, (lvl, h, body) in enumerate(heads):
+            hl = h.lower()
+            if k in taken or any(x in hl for x in SKIP) or not any(x in hl for x in keys):
+                continue
+            # neem ook onderliggende kopjes mee
+            chunk = [body]
+            for lvl2, h2, b2 in heads[k + 1:]:
+                if lvl2 <= lvl:
+                    break
+                if not any(x in h2.lower() for x in SKIP):
+                    chunk.append(b2)
+            t = trim(" ".join(c for c in chunk if c), 520)
+            if len(t) >= 80:
+                out.append({"h": label, "t": t})
+                taken.add(k)
+                break
+    return out
+
+
+def months(taxon):
+    url = ("https://api.inaturalist.org/v1/observations/histogram?interval=month_of_year&verifiable=true"
+           f"&place_id={NL_PLACE}&taxon_id={taxon}")
+    m = (get(url, soft=True) or {}).get("results", {}).get("month_of_year", {})
+    vals = [m.get(str(i), 0) for i in range(1, 13)]
+    top = max(vals) or 1
+    return [round(100 * v / top) for v in vals] if sum(vals) >= 12 else None
+
+
+def similar(taxon, by_inat):
+    url = f"https://api.inaturalist.org/v1/identifications/similar_species?taxon_id={taxon}&place_id={NL_PLACE}&locale=nl"
+    res = [r for r in (get(url, soft=True) or {}).get("results", []) if r["taxon"].get("rank") in ("species", "hybrid") and r["count"] >= 2]
+    out = []
+    for r in res[:4]:
+        t = r["taxon"]
+        if t["id"] in by_inat:
+            out.append({"id": by_inat[t["id"]]})
+        else:
+            n = t.get("preferred_common_name") or ""
+            n = (n[:1].upper() + n[1:].lower()) if n else t["name"]
+            out.append({"n": n, "s": t["name"]})
+    return out
+
+
 def main():
     rows = parse()
     print(f"{len(rows)} soorten in bronlijst")
@@ -255,6 +345,24 @@ def main():
             "photos": photos,
             "wiki": {"t": wk["text"], "u": wk["url"]} if wk else None,
         })
+
+    print("5/5 extra info: Wikipedia-kopjes, seizoen en lijkende soorten…")
+    by_inat = {sp["inat"]: sp["id"] for sp in out}
+    info = {}
+    for n, sp in enumerate(out, 1):
+        wk = w.get(sp["sci"]) or w.get(sp["nl"])
+        info[sp["id"]] = {
+            "m": months(sp["inat"]),
+            "sim": [x for x in similar(sp["inat"], by_inat) if x.get("id") != sp["id"]],
+            "sec": wiki_sections(wk["title"]) if wk else [],
+        }
+        if n % 20 == 0:
+            save_cache()
+            print(f"  {n}/{len(out)}")
+    save_cache()
+    INFO.write_text(json.dumps(info, ensure_ascii=False, separators=(",", ":")))
+    nosec = sum(1 for v in info.values() if not v["sec"])
+    print(f"Info: {INFO.relative_to(ROOT)} ({INFO.stat().st_size // 1024} kB); {nosec} soorten zonder Wikipedia-kopjes")
 
     OUT.write_text(json.dumps({"generated": time.strftime("%Y-%m-%d"), "species": out}, ensure_ascii=False, separators=(",", ":")))
     near = sum(1 for s in out if s["bestObs"] > 0)

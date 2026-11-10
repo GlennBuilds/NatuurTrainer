@@ -344,6 +344,36 @@ button.row:active, a.row:active { background: var(--fill); }
 
 .tipbox { flex: none; background: var(--bg2); border-radius: 18px; padding: 13px 16px; line-height: 1.4; font-size: 16px; letter-spacing: -.3px; }
 
+/* intro: eerste scherm zoals altijd, daaronder scrollen voor meer */
+.s-body.intro { display: block; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.s-body.intro > .stage { height: 100%; }
+.more-hint {
+  flex: none; align-self: center; display: flex; align-items: center; gap: 7px; padding: 4px 12px 2px;
+  color: var(--accent); font-size: 15px; font-weight: 600; letter-spacing: -.2px;
+}
+.more-hint svg { width: 13px; height: 8px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.s-body .info { padding: 18px 0 12px; }
+.s-body .info .panel { margin: 0 0 12px; }
+
+/* infoblok (intro en gids) */
+.info-wait { color: var(--label2); text-align: center; padding: 20px; margin: 0; }
+.info-src { font-size: 12px; color: var(--label2); margin: 4px 32px 0; line-height: 1.45; letter-spacing: 0; }
+.s-body .info-src { margin: 4px 18px 0; }
+.info-src a { color: var(--blue); }
+.season p { margin-bottom: 14px; }
+.months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; }
+.mo { display: grid; grid-template-rows: 64px auto; justify-items: center; gap: 5px; }
+.mo i { align-self: end; width: min(100%, 16px); border-radius: 4px 4px 0 0; background: var(--accent); opacity: .32; }
+.mo.now i { opacity: 1; }
+.mo span { font-size: 11px; color: var(--label2); font-weight: 500; letter-spacing: 0; }
+.mo.now span { color: var(--label); font-weight: 700; }
+.sim-row { display: flex; gap: 10px; overflow-x: auto; margin: 6px -18px 0; padding: 4px 18px 2px; scrollbar-width: none; }
+.sim-row::-webkit-scrollbar { display: none; }
+.sim { flex: none; width: 92px; color: var(--label); font-size: 13px; font-weight: 600; line-height: 1.25; letter-spacing: -.08px; }
+.sim img { display: block; width: 92px; height: 92px; border-radius: 16px; object-fit: cover; background: var(--fill); margin-bottom: 6px; }
+a.sim:active img { opacity: .75; }
+.sim-other { margin-top: 10px !important; color: var(--label2); font-size: 15px; letter-spacing: -.2px; }
+
 /* feedback onderin */
 .fb { border-radius: 24px; padding: 14px 16px 12px; margin: 0 -4px; animation: fbIn .3s cubic-bezier(.2, .8, .2, 1); }
 .fb.ok { background: var(--accent-soft); }
