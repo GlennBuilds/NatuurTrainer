@@ -1,0 +1,255 @@
+# Bronlijst soorten. Formaat: categorie | Nederlandse naam | wetenschappelijke naam | herkenningstip
+# Categorieën: vogels, zoogdieren, bomen, bloemen, paddenstoelen, vlinders, insecten, amfibieen
+# Na wijzigen: python3 scripts/bouw_data.py  (haalt foto's, tellingen en Wikipedia-tekst op)
+
+vogels | Merel | Turdus merula | Man helemaal zwart met oranjegele snavel; vrouwtje donkerbruin. Hipt over gazons.
+vogels | Roodborst | Erithacus rubecula | Rond vogeltje met oranjerode borst en gezicht, grijze rand eromheen.
+vogels | Koolmees | Parus major | Gele buik met een zwarte 'stropdas' over het midden, zwarte kop met witte wangen.
+vogels | Pimpelmees | Cyanistes caeruleus | Kleiner dan de koolmees, met hemelsblauw petje en blauwe vleugels.
+vogels | Huismus | Passer domesticus | Man met grijze kruin en zwarte bef; leeft in groepjes bij huizen.
+vogels | Ringmus | Passer montanus | Bruine kruin en een zwarte vlek op de witte wang (beide seksen gelijk).
+vogels | Vink | Fringilla coelebs | Man met roze borst en blauwgrijze kop; beide seksen met witte vleugelstrepen.
+vogels | Groenling | Chloris chloris | Olijfgroene vink met dikke snavel en gele randen aan vleugel en staart.
+vogels | Putter | Carduelis carduelis | Rood gezicht, zwart-witte kop en brede gele band over de zwarte vleugel.
+vogels | Goudvink | Pyrrhula pyrrhula | Man met diep roze borst, zwart petje en een korte, dikke zwarte snavel.
+vogels | Spreeuw | Sturnus vulgaris | Glanzend zwart met paarsgroene weerschijn; in de winter vol witte stippen.
+vogels | Zanglijster | Turdus philomelos | Bruine rug en lichte borst vol donkere, pijlvormige stippen.
+vogels | Winterkoning | Troglodytes troglodytes | Piepklein bruin bolletje met rechtop gestoken staartje; zingt oorverdovend hard.
+vogels | Heggenmus | Prunella modularis | Lijkt op een mus, maar met grijze kop en borst en een dun snaveltje.
+vogels | Staartmees | Aegithalos caudatus | Rond roze-zwart-wit bolletje met een extreem lange staart; trekt in groepjes.
+vogels | Boomklever | Sitta europaea | Blauwgrijze rug, zwarte oogstreep; loopt als enige vogel kopje-onder langs stammen.
+vogels | Boomkruiper | Certhia brachydactyla | Bruin gestreept, gebogen snaveltje; kruipt spiraalsgewijs omhoog langs stammen.
+vogels | Grote bonte specht | Dendrocopos major | Zwart-wit met grote witte schoudervlekken en rood onder de staart.
+vogels | Groene specht | Picus viridis | Grote groene specht met rode kruin; zoekt mieren op de grond, 'lachende' roep.
+vogels | Tjiftjaf | Phylloscopus collybita | Klein olijfgrijs zangertje dat letterlijk 'tjif-tjaf' zingt; donkere poten.
+vogels | Zwartkop | Sylvia atricapilla | Grijs zangertje; man met zwart petje, vrouwtje met roodbruin petje.
+vogels | Witte kwikstaart | Motacilla alba | Zwart-wit-grijs, wipt voortdurend met de lange staart; loopt snel over de grond.
+vogels | Boerenzwaluw | Hirundo rustica | Diep gevorkte staart met lange 'spiesen' en een roodbruine keel.
+vogels | Huiszwaluw | Delichon urbicum | Blauwzwart met opvallend witte stuit; bouwt modderkommetjes onder dakranden.
+vogels | Gierzwaluw | Apus apus | Helemaal donker met sikkelvormige vleugels; gillend in groepen boven daken (mei–aug).
+vogels | Buizerd | Buteo buteo | Middelgrote roofvogel met brede vleugels; vaak op een paaltje langs de weg.
+vogels | Torenvalk | Falco tinnunculus | Roodbruine rug; 'bidt' stil in de lucht boven bermen en akkers.
+vogels | Sperwer | Accipiter nisus | Korte ronde vleugels en lange staart; jaagt bliksemsnel op zangvogels in tuinen.
+vogels | Blauwe reiger | Ardea cinerea | Grote grijze reiger met zwarte kuif; staat roerloos aan de waterkant.
+vogels | Grote zilverreiger | Ardea alba | Helemaal witte, grote reiger met lange hals en gele snavel (buiten broedtijd).
+vogels | Ooievaar | Ciconia ciconia | Groot wit met zwarte vleugelpennen, rode snavel en rode poten.
+vogels | Wilde eend | Anas platyrhynchos | Woerd met glanzend groene kop en witte halsring; vrouwtje bruin gespikkeld.
+vogels | Kuifeend | Aythya fuligula | Zwart-witte duikeend met een hangend kuifje en een fel geel oog.
+vogels | Meerkoet | Fulica atra | Zwarte watervogel met een wit voorhoofdsschild en witte snavel.
+vogels | Waterhoen | Gallinula chloropus | Donker met rood voorhoofdsschild en rode snavel met geel puntje; wipt met de staart.
+vogels | Knobbelzwaan | Cygnus olor | Grote witte zwaan met oranje snavel en een zwarte knobbel.
+vogels | Nijlgans | Alopochen aegyptiaca | Bruingrijze gans met een donkere 'brillenvlek' rond het oog.
+vogels | Grauwe gans | Anser anser | Grijsbruine gans met een oranje snavel en roze poten; stamvader van de tamme gans.
+vogels | Canadese gans | Branta canadensis | Bruine gans met zwarte hals en kop en een witte kinband.
+vogels | Kokmeeuw | Chroicocephalus ridibundus | Kleine meeuw; in de zomer chocoladebruine kop, in de winter alleen een donker oorvlekje.
+vogels | Zilvermeeuw | Larus argentatus | Grote meeuw met lichtgrijze rug, roze poten en een rode vlek op de gele snavel.
+vogels | Kievit | Vanellus vanellus | Zwart-wit met groene glans en een lange omhoogstekende kuif.
+vogels | Grutto | Limosa limosa | Weidevogel met lange rechte snavel; in de zomer oranjebruine hals. Nationale vogel.
+vogels | Scholekster | Haematopus ostralegus | Zwart-wit met een lange oranjerode snavel en roze poten.
+vogels | Aalscholver | Phalacrocorax carbo | Grote zwarte watervogel; zit vaak met gespreide vleugels te drogen.
+vogels | Fuut | Podiceps cristatus | Elegante watervogel met lange witte hals en in de zomer een oranje kraag en kuifjes.
+vogels | IJsvogel | Alcedo atthis | Klein, fel blauw-oranje, met lange dolkvormige snavel; schiet laag over het water.
+vogels | Halsbandparkiet | Psittacula krameri | Felgroene parkiet met rode snavel en lange staart; luidruchtig in stadsparken.
+vogels | Houtduif | Columba palumbus | Grote duif met witte halsvlek en witte band op de vleugel.
+vogels | Turkse tortel | Streptopelia decaocto | Slanke zandkleurige duif met een smal zwart nekbandje.
+vogels | Ekster | Pica pica | Zwart-wit met een lange, groen-blauw glanzende staart.
+vogels | Gaai | Garrulus glandarius | Roze-bruin met een blauw-zwart geblokt vlekje op de vleugel; krijst luid.
+vogels | Kauw | Coloeus monedula | Kleine kraai met grijze nek en een opvallend lichtblauw oog.
+vogels | Zwarte kraai | Corvus corone | Volledig zwart, ook de snavel; meestal solitair of in paartjes.
+vogels | Roek | Corvus frugilegus | Zwart met een kale, grijswitte snavelbasis; broedt in kolonies.
+vogels | Bosuil | Strix aluco | Ronde kop zonder oorpluimen, donkere ogen; het bekende 'hoe-hoehoe' in de nacht.
+vogels | Steenuil | Athene noctua | Klein uiltje met gele ogen en een frons; zit op knotwilgen en schuren.
+vogels | Veldleeuwerik | Alauda arvensis | Bruin gestreept met klein kuifje; zingt eindeloos hoog in de lucht boven akkers.
+vogels | Koekoek | Cuculus canorus | Grijs met gestreepte buik, lijkt op een sperwer; roept zijn eigen naam (lente).
+vogels | Fazant | Phasianus colchicus | Haan koperkleurig met groene kop, rode lellen en een zeer lange staart.
+
+zoogdieren | Eekhoorn | Sciurus vulgaris | Roodbruin met pluimstaart en oorpluimpjes (vooral in de winter).
+zoogdieren | Egel | Erinaceus europaeus | Rug vol stekels; rolt zich op bij gevaar. 's Nachts actief in tuinen.
+zoogdieren | Vos | Vulpes vulpes | Roodbruin met een dikke staart met witte punt en zwarte 'sokken'.
+zoogdieren | Ree | Capreolus capreolus | Klein hert met witte 'spiegel' op de billen; bok met kort gewei met drie punten.
+zoogdieren | Edelhert | Cervus elaphus | Groot hert; mannetje met imposant vertakt gewei. Burlt in de herfst.
+zoogdieren | Damhert | Dama dama | Bruin met witte vlekken; mannetje met schepvormig gewei.
+zoogdieren | Wild zwijn | Sus scrofa | Donker borstelig varken; jongen hebben lichte lengtestrepen.
+zoogdieren | Haas | Lepus europaeus | Groter dan konijn, lange oren met zwarte punt; leeft in open veld.
+zoogdieren | Konijn | Oryctolagus cuniculus | Kleiner dan haas, kortere oren zonder zwarte punt; woont in holen.
+zoogdieren | Das | Meles meles | Grijze rug en een zwart-wit gestreepte kop; graaft grote burchten.
+zoogdieren | Hermelijn | Mustela erminea | Slanke marter met zwarte staartpunt; in strenge winters helemaal wit.
+zoogdieren | Wezel | Mustela nivalis | Kleinste roofdier van Nederland; zoals hermelijn maar zonder zwarte staartpunt.
+zoogdieren | Steenmarter | Martes foina | Bruine marter met witte, gevorkte keelvlek; leeft ook op zolders.
+zoogdieren | Mol | Talpa europaea | Fluweelzwart met grote graafhanden; verraadt zich door molshopen.
+zoogdieren | Gewone dwergvleermuis | Pipistrellus pipistrellus | Piepkleine vleermuis die bij schemer rond huizen en lantaarns jaagt.
+zoogdieren | Bever | Castor fiber | Groot knaagdier met platte geschubde staart; knaagt bomen tot 'potloden'.
+zoogdieren | Otter | Lutra lutra | Slank, bruin roofdier in het water met dikke staart en kleine oren.
+zoogdieren | Gewone zeehond | Phoca vitulina | Ronde kop met 'hondensnuit' en V-vormige neusgaten; ligt op zandplaten.
+zoogdieren | Grijze zeehond | Halichoerus grypus | Groter dan gewone zeehond, met lange 'paardenkop' en parallelle neusgaten.
+zoogdieren | Bruinvis | Phocoena phocoena | Kleine walvis met driehoekige rugvin; soms vanaf het strand te zien.
+zoogdieren | Bosmuis | Apodemus sylvaticus | Bruin muisje met grote oren, bolle ogen en lange staart; springt.
+zoogdieren | Rosse woelmuis | Clethrionomys glareolus | Roodbruine rug, stompe snuit en kleine oortjes; kortere staart dan bosmuis.
+zoogdieren | Bruine rat | Rattus norvegicus | Grijsbruin met dikke geschubde staart die korter is dan het lijf.
+zoogdieren | Bosspitsmuis | Sorex araneus | Spitse snuit met roodbruine tandpunten; driekleurig: donkere rug, bruine flank, lichte buik.
+
+bomen | Zomereik | Quercus robur | Gelobd blad met korte steel en 'oortjes' aan de voet; eikels aan lange steeltjes.
+bomen | Amerikaanse eik | Quercus rubra | Groot blad met puntige lobben; kleurt in de herfst rood.
+bomen | Beuk | Fagus sylvatica | Gladde zilvergrijze stam; ovaal blad met golvende rand; driekantige beukennootjes.
+bomen | Ruwe berk | Betula pendula | Witte bast met zwarte ruitjes, hangende twijgen en driehoekig blaadje.
+bomen | Zwarte els | Alnus glutinosa | Rond blad met ingedeukte top; houtige 'elzenproppen' als minidennenappels. Bij water.
+bomen | Es | Fraxinus excelsior | Geveerd blad en zwarte winterknoppen; gevleugelde zaden in trossen.
+bomen | Gewone esdoorn | Acer pseudoplatanus | Handvormig vijflobbig blad; gevleugelde 'helikopter'-zaden in V-vorm.
+bomen | Noorse esdoorn | Acer platanoides | Handvormig blad met spitse puntjes; melksap in de bladsteel; zaden bijna gestrekt.
+bomen | Spaanse aak | Acer campestre | Klein vijflobbig blad met ronde lobben; zaden in een rechte lijn. Vaak in hagen.
+bomen | Winterlinde | Tilia cordata | Hartvormig blad met roestbruine haarpluisjes onder in de nerfoksels; geurende bloei in juli.
+bomen | Paardenkastanje | Aesculus hippocastanum | Handvormig blad met 5–7 vingers; glanzende kastanjes in stekelige bolsters.
+bomen | Tamme kastanje | Castanea sativa | Lang, getand blad; eetbare kastanjes in zeer stekelige bolsters.
+bomen | Schietwilg | Salix alba | Smal zilverachtig blad; vaak als knotwilg langs sloten.
+bomen | Boswilg | Salix caprea | Breder, ovaal wilgenblad; in maart zilveren 'katjes' (wilgenkatjes).
+bomen | Canadese populier | Populus × canadensis | Hoge rechte boom met driehoekig blad dat ritselt in de wind; langs wegen.
+bomen | Grove den | Pinus sylvestris | Naalden per twee; bovenin de stam opvallend oranjerode bast.
+bomen | Europese lork | Larix decidua | Naaldboom die in de herfst goudgeel kleurt en zijn naalden verliest; naalden in bosjes.
+bomen | Fijnspar | Picea abies | Kerstboom: korte scherpe naalden rondom het takje, hangende kegels.
+bomen | Douglasspar | Pseudotsuga menziesii | Zachte naalden die naar citrus ruiken; kegels met drietandige schubben ('muisjes').
+bomen | Taxus | Taxus baccata | Donkergroene platte naalden en rode bessen; vrijwel alles is giftig.
+bomen | Haagbeuk | Carpinus betulus | Geplooid, dubbel gezaagd blad; gegroefde 'gespierde' stam. Veel in hagen.
+bomen | Hazelaar | Corylus avellana | Rond, ruw blad; gele katjes in februari, hazelnoten in de herfst.
+bomen | Wilde lijsterbes | Sorbus aucuparia | Geveerd blad met gezaagde blaadjes; trossen oranjerode bessen.
+bomen | Eenstijlige meidoorn | Crataegus monogyna | Doornige struik met diep ingesneden blaadjes; witte bloei in mei, rode bessen.
+bomen | Gewone vlier | Sambucus nigra | Geveerd blad, platte schermen witte bloemen en trossen zwarte bessen.
+bomen | Sleedoorn | Prunus spinosa | Doornige struik die al vroeg in maart wit bloeit vóór het blad; blauwe sleebessen.
+bomen | Amerikaanse vogelkers | Prunus serotina | Glanzend blad met kleine tandjes; trossen zwarte bessen. Woekeraar in bossen.
+bomen | Hulst | Ilex aquifolium | Glanzend, stekelig groenblijvend blad; rode bessen in de winter.
+bomen | Plataan | Platanus × hispanica | Bast schilfert af in 'camouflagevlekken'; bolletjesvruchten aan draadjes.
+bomen | Robinia | Robinia pseudoacacia | Geveerd blad met ronde blaadjes en doorns; hangende trossen witte bloemen.
+bomen | Sporkehout | Frangula alnus | Glad, gaafrandig blad met parallelle nerven; bessen van groen via rood naar zwart.
+bomen | Gewone vlinderstruik | Buddleja davidii | Lange paarse bloemtrossen vol vlinders; groeit graag op braakliggende grond.
+
+bloemen | Paardenbloem | Taraxacum officinale | Gele bloemhoofdjes, diep getand blad in een rozet; daarna het pluizenbolletje.
+bloemen | Madeliefje | Bellis perennis | Klein wit bloemhoofdje met geel hart; staat het hele jaar in het gazon.
+bloemen | Scherpe boterbloem | Ranunculus acris | Glanzend gele bloem met vijf kroonbladen, diep ingesneden blad.
+bloemen | Speenkruid | Ficaria verna | Glanzend gele sterbloem met 8–12 kroonbladen en hartvormig blad; vroeg voorjaar.
+bloemen | Witte klaver | Trifolium repens | Witte bolletjesbloem; blaadjes in drieën met een witte V-tekening.
+bloemen | Rode klaver | Trifolium pratense | Roze-paarse bolbloem; wordt veel door hommels bezocht.
+bloemen | Gewone margriet | Leucanthemum vulgare | Groot wit-geel bloemhoofdje op lange steel in hooilanden en bermen.
+bloemen | Echte kamille | Matricaria chamomilla | Wit-gele bloempjes met een hol, kegelvormig hart; ruikt naar kamillethee.
+bloemen | Duizendblad | Achillea millefolium | Platte schermen kleine witte bloemetjes; fijn, veervormig verdeeld blad.
+bloemen | Akkerdistel | Cirsium arvense | Kleine lila distelbloemen in groepen; minder stekelig dan speerdistel.
+bloemen | Speerdistel | Cirsium vulgare | Grote paarse distel met zeer stekelige, gevleugelde stengels.
+bloemen | Grote brandnetel | Urtica dioica | Getande bladeren met brandharen; hangende groene bloemtrosjes.
+bloemen | Witte dovenetel | Lamium album | Lijkt op een brandnetel maar prikt niet; witte lipbloemen in kransen.
+bloemen | Paarse dovenetel | Lamium purpureum | Laag plantje met paarsrode top en kleine roze lipbloemen; vroeg voorjaar.
+bloemen | Hondsdraf | Glechoma hederacea | Kruipend, met niervormige blaadjes en blauwpaarse lipbloempjes; ruikt kruidig.
+bloemen | Bosanemoon | Anemone nemorosa | Witte stervormige bloempjes in tapijten op de bosbodem, maart–april.
+bloemen | Wilde hyacint | Hyacinthoides non-scripta | Blauwe klokjes aan één kant van een overhangende steel; bossen in april.
+bloemen | Gewoon sneeuwklokje | Galanthus nivalis | Hangend wit klokje met groen vlekje; bloeit al in januari–februari.
+bloemen | Grote klaproos | Papaver rhoeas | Vuurrode bloem met zwart hart en kroonblaadjes als vloeipapier.
+bloemen | Korenbloem | Centaurea cyanus | Helderblauwe bloem met franjeachtige randbloemen; in akkerranden.
+bloemen | Wilde cichorei | Cichorium intybus | Hemelsblauwe bloemen langs de stengel; alleen 's ochtends open.
+bloemen | Wilde peen | Daucus carota | Wit scherm met vaak één donkerpaars bloempje in het midden.
+bloemen | Fluitenkruid | Anthriscus sylvestris | Kantachtige witte schermen in mei; overal in bermen, fijn verdeeld blad.
+bloemen | Gewone berenklauw | Heracleum sphondylium | Grote witte schermen, ruwe grote bladeren; algemeen in bermen.
+bloemen | Wilgenroosje | Chamerion angustifolium | Hoge spikes met roze bloemen; pluizende zaden in de nazomer.
+bloemen | Grote kattenstaart | Lythrum salicaria | Paarse bloemaren langs de waterkant in de zomer.
+bloemen | Gele lis | Iris pseudacorus | Grote gele irisbloem met zwaardvormig blad aan de oever.
+bloemen | Dotterbloem | Caltha palustris | Grote glanzend gele bloemen en ronde, glimmende bladeren in natte grond.
+bloemen | Pinksterbloem | Cardamine pratensis | Lichtlila bloempjes in natte graslanden rond Pinksteren.
+bloemen | Struikhei | Calluna vulgaris | Dwergstruikje met schubvormige blaadjes; kleurt de heide paars in aug–sept.
+bloemen | Gewone dophei | Erica tetralix | Roze klokjes in een trosje bovenaan; op natte heide, bloeit vóór struikhei.
+bloemen | Vingerhoedskruid | Digitalis purpurea | Hoge tros paarse 'vingerhoedjes' met gevlekte binnenkant. Giftig.
+bloemen | Sint-Janskruid | Hypericum perforatum | Gele bloem; tegen het licht zie je doorschijnende puntjes in het blad.
+bloemen | Boerenwormkruid | Tanacetum vulgare | Gele 'knoopjes' zonder randbloemen; varenachtig blad, sterke geur.
+bloemen | Jakobskruiskruid | Jacobaea vulgaris | Gele schermen van margrietachtige bloemen; waardplant van de sint-jacobsvlinder.
+bloemen | Smalle weegbree | Plantago lanceolata | Smalle bladeren in een rozet; donkere 'kopjes' met een kransje meeldraden.
+bloemen | Veldzuring | Rumex acetosa | Pijlvormig blad met zure smaak; roodbruine bloemtrossen in het grasland.
+bloemen | Robertskruid | Geranium robertianum | Klein roze bloempje, rode stengels en blad dat vies ruikt; schaduwrijke plekken.
+bloemen | Vogelwikke | Vicia cracca | Eenzijdige trossen blauwpaarse bloempjes; klimt met rankjes.
+bloemen | Gewone rolklaver | Lotus corniculatus | Gele vlinderbloempjes met rode knoppen; zaaddozen als vogelpootjes.
+bloemen | Haagwinde | Calystegia sepium | Grote witte trompetbloemen; slingert zich om struiken en hekken.
+bloemen | Witte waterlelie | Nymphaea alba | Grote witte bloem drijvend tussen ronde drijfbladen.
+bloemen | Reuzenbalsemien | Impatiens glandulifera | Hoge plant met roze 'helmbloemen'; zaaddozen springen open bij aanraking.
+bloemen | Look-zonder-look | Alliaria petiolata | Witte kruisbloempjes en hartvormig blad dat naar knoflook ruikt.
+
+paddenstoelen | Vliegenzwam | Amanita muscaria | Rode hoed met witte vlokken; onder berken en dennen. Giftig.
+paddenstoelen | Groene knolamaniet | Amanita phalloides | Olijfgroene hoed, witte plaatjes, ring en knol in een vlies. Dodelijk giftig.
+paddenstoelen | Eekhoorntjesbrood | Boletus edulis | Dikke bruine hoed als een broodje, buisjes in plaats van plaatjes, dikke steel met netwerk.
+paddenstoelen | Kastanjeboleet | Imleria badia | Kastanjebruine hoed; de gele buisjes kleuren blauw bij drukken.
+paddenstoelen | Amethistzwam | Laccaria amethystina | Klein en helemaal paars, ook de plaatjes en steel.
+paddenstoelen | Geschubde inktzwam | Coprinus comatus | Hoge witte 'advocatenpruik' met schubben; vervloeit tot zwarte inkt.
+paddenstoelen | Grote stinkzwam | Phallus impudicus | Witte steel met olijfgroene slijmerige top; ruikt van verre naar aas.
+paddenstoelen | Gewoon elfenbankje | Trametes versicolor | Dunne, gezoneerde 'waaiers' in vele kleuren op dood hout.
+paddenstoelen | Berkenzwam | Fomitopsis betulina | Witte, kussenvormige consolezwam uitsluitend op berken.
+paddenstoelen | Gewone zwavelkop | Hypholoma fasciculare | Zwavelgele hoedjes in dichte bossen op stronken; groenige plaatjes.
+paddenstoelen | Parelstuifzwam | Lycoperdon perlatum | Wit peertje vol wratjes; bij rijpheid stuift er bruin sporenpoeder uit.
+paddenstoelen | Echte honingzwam | Armillaria mellea | Honingkleurige hoeden in grote groepen aan de voet van bomen; ring aan de steel.
+paddenstoelen | Judasoor | Auricularia auricula-judae | Bruine, rubberachtige 'oortjes' op vlier.
+paddenstoelen | Inktviszwam | Clathrus archeri | Rode 'armen' als een zeester uit een heksenei; stinkt naar aas.
+paddenstoelen | Geweizwam | Xylaria hypoxylon | Zwart-wit gewei-achtige vertakte steeltjes op dood hout.
+paddenstoelen | Hanenkam | Cantharellus cibarius | Dooiergele trechter met lijsten in plaats van echte plaatjes.
+paddenstoelen | Gewone krulzoom | Paxillus involutus | Bruine hoed met ingerolde rand; plaatjes verkleuren bruin bij aanraken.
+paddenstoelen | Zwavelzwam | Laetiporus sulphureus | Feloranje-gele dakpansgewijze consoles op eik en wilg.
+paddenstoelen | Oesterzwam | Pleurotus ostreatus | Grijze schelpvormige hoeden in groepjes op loofhout.
+paddenstoelen | Gewone heksenboleet | Neoboletus erythropus | Bruine hoed, rode buisjesmondingen en rood gestippelde steel; wordt direct blauw.
+
+vlinders | Dagpauwoog | Aglais io | Roodbruin met vier grote blauwe 'pauwenogen'.
+vlinders | Kleine vos | Aglais urticae | Oranje met zwarte en gele vlekken en een rand van blauwe maantjes.
+vlinders | Atalanta | Vanessa atalanta | Zwart met een oranjerode band en witte vlekken in de vleugelpunt.
+vlinders | Distelvlinder | Vanessa cardui | Zalmoranje met zwarte vlekken en witte stippen in de punt; trekvlinder.
+vlinders | Gehakkelde aurelia | Polygonia c-album | Oranje met grillig 'gehakkelde' vleugelrand; witte C op de onderkant.
+vlinders | Klein koolwitje | Pieris rapae | Wit met grijze vleugelpunt en één of twee zwarte stippen.
+vlinders | Groot koolwitje | Pieris brassicae | Groter wit met een brede zwarte vleugelpunt die ver doorloopt.
+vlinders | Klein geaderd witje | Pieris napi | Wit met grijsgroen aangezette aders aan de onderkant.
+vlinders | Oranjetipje | Anthocharis cardamines | Mannetje wit met felle oranje vleugelpunten; onderkant groen gemarmerd.
+vlinders | Citroenvlinder | Gonepteryx rhamni | Citroengeel (man) met puntige vleugels; eerste vlinder van het voorjaar.
+vlinders | Bont zandoogje | Pararge aegeria | Bruin met crèmekleurige vlekken; in zonnige plekjes in het bos.
+vlinders | Bruin zandoogje | Maniola jurtina | Bruin met oranje vlek en één zwart oogje in de vleugelpunt; graslanden.
+vlinders | Koevinkje | Aphantopus hyperantus | Donkerbruin fluweel; onderkant met gele oogjes met witte pupil.
+vlinders | Hooibeestje | Coenonympha pamphilus | Klein oranjebruin vlindertje dat altijd met dichtgeklapte vleugels zit.
+vlinders | Icarusblauwtje | Polyommatus icarus | Man helder blauw; onderkant met oranje vlekjes en veel stippen.
+vlinders | Kleine vuurvlinder | Lycaena phlaeas | Klein, glanzend koperoranje met zwarte vlekjes en bruine rand.
+vlinders | Boomblauwtje | Celastrina argiolus | Lichtblauw; onderkant zilverwit met zwarte puntjes zonder oranje.
+vlinders | Groot dikkopje | Ochlodes sylvanus | Oranjebruin, dik lijfje, houdt vleugels half open als een straaljager.
+vlinders | Landkaartje | Araschnia levana | Onderkant als een landkaart; zomervorm zwart met witte band.
+vlinders | Kolibrievlinder | Macroglossum stellatarum | Overdag vliegende pijlstaart die als een kolibrie voor bloemen hangt.
+vlinders | Sint-jacobsvlinder | Tyria jacobaeae | Zwart met karmijnrode strepen en stippen; rupsen geel-zwart gestreept.
+vlinders | Buxusmot | Cydalima perspectalis | Witte vleugels met bruine rand; rupsen kalen buxusstruiken kaal.
+vlinders | Gamma-uil | Autographa gamma | Grijsbruine nachtvlinder met een zilveren 'γ' op de vleugel; ook overdag actief.
+
+insecten | Zevenstippelig lieveheersbeestje | Coccinella septempunctata | Rood met zeven zwarte stippen en twee witte vlekjes op het borststuk.
+insecten | Veelkleurig Aziatisch lieveheersbeestje | Harmonia axyridis | Variabel oranje tot zwart; vaak een zwarte 'M' op het witte borststuk.
+insecten | Vliegend hert | Lucanus cervus | Grootste kever van Nederland; mannetje met gewei-achtige kaken.
+insecten | Meikever | Melolontha melolontha | Bruine kever met waaiervormige voelsprieten en wit gezaagde zijkanten.
+insecten | Vuurwants | Pyrrhocoris apterus | Rood-zwart patroon als een masker; in groepjes op lindestammen.
+insecten | Groene stinkwants | Palomena prasina | Groen schildvormig insect; wordt in de herfst bruin. Stinkt bij aanraking.
+insecten | Honingbij | Apis mellifera | Bruinig met lichte banden, slank; leeft in kasten bij imkers.
+insecten | Aardhommel | Bombus terrestris | Zwart met twee gele banden en een witte achterlijfspunt.
+insecten | Steenhommel | Bombus lapidarius | Helemaal zwart met een feloranjerode achterlijfspunt.
+insecten | Akkerhommel | Bombus pascuorum | Rossig bruin behaard over het hele lijf; algemeenste hommel.
+insecten | Hoornaar | Vespa crabro | Zeer grote wesp met bruinrood borststuk en geel achterlijf.
+insecten | Gewone wesp | Vespula vulgaris | Geel-zwart met ankervormige tekening op het gezicht.
+insecten | Pyjamazweefvlieg | Episyrphus balteatus | Oranje met dubbele zwarte streepjes; hangt stil in de lucht.
+insecten | Blinde bij | Eristalis tenax | Zweefvlieg die op een honingbij lijkt, maar met grote ogen en één paar vleugels.
+insecten | Weidebeekjuffer | Calopteryx splendens | Metaalblauw lijf; mannetje met een donkere band op de vleugels. Bij stromend water.
+insecten | Grote keizerlibel | Anax imperator | Grote libel met hemelsblauw achterlijf met zwarte streep en groen borststuk.
+insecten | Bruinrode heidelibel | Sympetrum striolatum | Middelgrote rode libel die vaak op een paaltje zit, tot ver in de herfst.
+insecten | Lantaarntje | Ischnura elegans | Dun zwart juffertje met een blauw 'lampje' vlak voor het puntje.
+insecten | Gewone oorworm | Forficula auricularia | Bruin met een tang aan het achterlijf; kruipt in kieren.
+insecten | Kruisspin | Araneus diadematus | Bruine spin met een wit kruis op het achterlijf; grote wielwebben in de herfst.
+insecten | Wespspin | Argiope bruennichi | Geel-zwart-wit gestreept achterlijf; web met een zigzag-band. Ruige graslanden.
+insecten | Grote groene sabelsprinkhaan | Tettigonia viridissima | Grote groene sprinkhaan met lange sprieten; zingt 's avonds luid.
+insecten | Gewone pantserjuffer | Lestes sponsa | Metaalgroen juffertje dat met half gespreide vleugels rust; man berijpt blauw.
+insecten | Zwarte wegmier | Lasius niger | Kleine zwartbruine mier; zwermt op warme zomerdagen massaal ('mierendag').
+insecten | Gewone tuinslak | Cepaea nemoralis | Huisje geel, roze of bruin met donkere banden en een donkere mondrand.
+insecten | Segrijnslak | Cornu aspersum | Grote slak met bol, bruin gemarmerd huisje met donkere spiraalbanden; veel in tuinen.
+
+amfibieen | Gewone pad | Bufo bufo | Wrattige bruine huid, koperkleurig oog; loopt in plaats van te springen.
+amfibieen | Bruine kikker | Rana temporaria | Bruin met een donkere 'oorvlek' achter het oog; gladde huid.
+amfibieen | Bastaardkikker | Pelophylax esculentus | Groen met donkere vlekken en een lichte rugstreep; kwaakt luid met wangblazen.
+amfibieen | Boomkikker | Hyla arborea | Klein felgroen kikkertje met hechtschijfjes aan de tenen; klimt in struiken.
+amfibieen | Rugstreeppad | Epidalea calamita | Pad met een gele streep over het midden van de rug; rent als een muis.
+amfibieen | Kleine watersalamander | Lissotriton vulgaris | Bruin salamandertje met oranje gevlekte buik; man met golvende rugkam in het voorjaar.
+amfibieen | Kamsalamander | Triturus cristatus | Grote donkere salamander met wrattige huid; man met hoge getande kam.
+amfibieen | Alpenwatersalamander | Ichthyosaura alpestris | Blauwgrijze rug en een egaal oranje buik zonder vlekken.
+amfibieen | Vuursalamander | Salamandra salamandra | Glanzend zwart met gele vlekken; alleen in Zuid-Limburg.
+amfibieen | Ringslang | Natrix helvetica | Grijsgroene slang met gele 'halsband' achter de kop; zwemt goed. Ongevaarlijk.
+amfibieen | Adder | Vipera berus | Zigzagstreep op de rug en verticale pupil; enige gifslang van Nederland. Heide.
+amfibieen | Hazelworm | Anguis fragilis | Pootloze hagedis: glanzend bruin, ziet eruit als slang maar knippert met de ogen.
+amfibieen | Levendbarende hagedis | Zootoca vivipara | Kleine bruine hagedis met lichte lengtestreepjes; heide en hoogveen.
+amfibieen | Zandhagedis | Lacerta agilis | Stevige hagedis; mannetje met groene flanken in het voorjaar. Zandige heide.
+amfibieen | Roodwangschildpad | Trachemys scripta | Uitgezette waterschildpad met rode of gele streep achter het oog; zont op takken.
