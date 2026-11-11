@@ -53,6 +53,10 @@ const img = (sp, i = 0, size = 'large') => sp.photos[i % sp.photos.length].u.rep
 const credit = (sp, i = 0) => { const p = sp.photos[i % sp.photos.length]; return `${p.a}, ${p.l.replace('-', ' ')}`; };
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const today = () => ymd(new Date());
+// Foto's van volwassen dieren (zonder rups, pop, ei, larve). Zolang je een soort nog leert
+// krijg je alleen die te zien; ken je hem (niveau 3+), dan komen de andere stadia erbij.
+const adults = sp => { const a = sp.photos.map((_, i) => i).filter(i => !sp.photos[i].st); return a.length ? a : sp.photos.map((_, i) => i); };
+const usable = sp => boxOf(sp.id) >= LEARNED ? sp.photos.map((_, i) => i).filter(i => sp.photos[i].st !== 'detail') : adults(sp);
 const lc = s => s.charAt(0).toLowerCase() + s.slice(1);
 const plural = (n, one, more) => `${n} ${n === 1 ? one : more}`;
 
@@ -522,7 +526,7 @@ function buildSession({ only = null } = {}) {
   const items = shuffle([...review.map(sp => ({ sp })), ...news.map(sp => ({ sp, isNew: true }))]);
   const steps = [];
   if (s.mode === 'kaarten') {
-    items.forEach(({ sp }) => steps.push({ type: 'card', sp, photo: Math.random() * sp.photos.length | 0 }));
+    items.forEach(({ sp }) => steps.push({ type: 'card', sp, photo: rnd(usable(sp)) }));
   } else {
     // vragen over een nieuwe soort komen niet direct na de kennismaking maar een paar stappen later
     const pending = [];
@@ -550,10 +554,11 @@ function buildSession({ only = null } = {}) {
 }
 
 function makeQuestion(sp, { type, avoid = -1 } = {}) {
-  const idx = sp.photos.map((_, i) => i).filter(i => i !== avoid || sp.photos.length === 1);
   type ||= Math.random() < .35 ? 'pick' : 'name';
+  let idx = type === 'pick' ? adults(sp) : usable(sp);
+  if (idx.length > 1) idx = idx.filter(i => i !== avoid);
   const opts = shuffle([sp, ...distractors(sp, 3)]);
-  return { type, sp, opts, photo: rnd(idx), photos: opts.map(o => o === sp ? rnd(idx) : Math.random() * o.photos.length | 0) };
+  return { type, sp, opts, photo: rnd(idx), photos: opts.map(o => o === sp ? rnd(idx) : rnd(adults(o))) };
 }
 
 // Afleiders worden lastiger naarmate je een soort beter kent. Voorrang voor soorten waar
@@ -727,7 +732,7 @@ function selfGrade(ok) {
   record(st.sp, ok);
   if (!S.results.some(r => r.sp === st.sp)) S.results.push({ sp: st.sp, ok });
   if (again) {
-    S.steps.push({ type: 'card', sp: st.sp, photo: (st.photo + 1) % st.sp.photos.length });
+    S.steps.push({ type: 'card', sp: st.sp, photo: rnd(usable(st.sp)) });
   }
   next();
 }

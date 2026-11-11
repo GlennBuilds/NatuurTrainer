@@ -29,6 +29,11 @@ SRC = ROOT / "data" / "soorten.txt"
 OUT = ROOT / "data" / "species.json"
 INFO = ROOT / "data" / "info.json"
 CACHE = ROOT / "scripts" / ".cache.json"
+# Per foto-id het levensstadium: "a" = volwassen dier, anders rups/pop/ei/larve/nimf/jong/detail.
+# Met de hand nagekeken voor vlinders, insecten en amfibieën; de app toont bij een soort
+# die je nog leert alleen volwassen dieren.
+STADIA = json.loads((ROOT / "scripts" / "stadia.json").read_text())
+STADIA_CATS = ("vlinders", "insecten", "amfibieen")
 
 UA = "NatuurTrainer/1.0 (persoonlijke leer-app)"
 NL_PLACE = 7506
@@ -306,7 +311,7 @@ def main():
     w.update(wiki(missing))
     save_cache()
 
-    out, used = [], set()
+    out, used, unknown = [], set(), []
     for sp in rows:
         t = taxa.get(sp["inat"], {})
         photos = []
@@ -317,13 +322,20 @@ def main():
             url = ph["url"]
             if "/square." not in url:
                 continue
-            photos.append({
+            item = {
                 "u": url.replace("/square.", "/{s}."),
                 "a": maker(ph.get("attribution") or ""),
                 "l": ph["license_code"].upper(),
-            })
+            }
+            stage = STADIA.get(str(ph.get("id")))
+            if sp["cat"] in STADIA_CATS and stage is None:
+                unknown.append(f"{sp['nl']}: foto {ph.get('id')}")
+            if stage and stage != "a":
+                item["st"] = stage
+            photos.append(item)
             if len(photos) >= MAX_PHOTOS:
                 break
+        photos.sort(key=lambda x: "st" in x)  # volwassen dieren eerst (blijft verder op volgorde)
         if not photos:
             print(f"  ! geen open foto's voor {sp['nl']} — overgeslagen")
             continue
@@ -367,6 +379,9 @@ def main():
     OUT.write_text(json.dumps({"generated": time.strftime("%Y-%m-%d"), "species": out}, ensure_ascii=False, separators=(",", ":")))
     near = sum(1 for s in out if s["bestObs"] > 0)
     print(f"Klaar: {len(out)} soorten → {OUT.relative_to(ROOT)} ({OUT.stat().st_size // 1024} kB); {near} gezien rond Best")
+    if unknown:
+        print("Nog geen stadium bekend (toevoegen aan scripts/stadia.json, nu als volwassen geteld):")
+        print("  " + "\n  ".join(unknown))
     nowiki = [s["nl"] for s in out if not s["wiki"]]
     if nowiki:
         print("Zonder Wikipedia-tekst:", ", ".join(nowiki))
