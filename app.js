@@ -17,6 +17,7 @@ const ALL_CATS = CATS.map(c => c.id);
 const HOUR = 36e5, DAY = 24 * HOUR;
 const INTERVAL = [0, 10 * 60e3, DAY, 3 * DAY, 8 * DAY, 21 * DAY]; // per niveau 0–5
 const LEARNED = 3;
+const MAX_NEW = 8; // hooguit zoveel nieuwe soorten in één ronde
 const KEY = 'natuur.v1';
 
 const ICON = {
@@ -50,7 +51,9 @@ const rnd = a => a[Math.random() * a.length | 0];
 const fold = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const img = (sp, i = 0, size = 'large') => sp.photos[i % sp.photos.length].u.replace('{s}', size);
 const credit = (sp, i = 0) => { const p = sp.photos[i % sp.photos.length]; return `${p.a}, ${p.l.replace('-', ' ')}`; };
-const today = () => new Date().toISOString().slice(0, 10);
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const today = () => ymd(new Date());
+const lc = s => s.charAt(0).toLowerCase() + s.slice(1);
 const plural = (n, one, more) => `${n} ${n === 1 ? one : more}`;
 
 let SPECIES = [], BY_ID = {}, DATA_DATE = '';
@@ -88,7 +91,13 @@ function route() {
   renderTab();
 }
 function go(hash) { if (location.hash !== hash) location.hash = hash; else route(); }
-function setActiveTab(tab) { document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab)); }
+function setActiveTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => {
+    const on = t.dataset.tab === tab;
+    t.classList.toggle('active', on);
+    if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+  });
+}
 
 function renderTab() {
   setActiveTab(view.tab);
@@ -123,9 +132,12 @@ function pageLeren() {
   const day = pl.length ? pl[hash(today() + s.cats.join()) % pl.length] : SPECIES[0];
   const dateTxt = new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
 
+  const seen = pl.filter(x => P(x.id)?.n);
+  const nextDue = Math.min(...seen.map(x => P(x.id).due));
   const status = due ? plural(due, 'soort om te herhalen', 'soorten om te herhalen')
     : learned === pl.length && pl.length ? 'Alles geleerd, knap!'
-    : `${pl.length - pl.filter(x => P(x.id)?.n).length} nieuw`;
+    : seen.length ? `Herhalen ${until(nextDue - Date.now())}`
+    : `${pl.length} nieuw`;
 
   return `<main class="page">
     ${navbar('Leren')}
@@ -136,8 +148,9 @@ function pageLeren() {
 
     <section class="hero">
       <img src="${img(day, 0)}" alt="">
-      <a class="hero-top" href="#/soort/${day.id}">
+      <a class="hero-top" href="#/soort/${day.id}" aria-label="Soort van de dag: ${esc(day.nl)}">
         <div><div class="hero-tag">Soort van de dag</div><div class="hero-name">${esc(day.nl)}</div></div>
+        <div class="hero-credit">${esc(credit(day, 0))}</div>
       </a>
       <div class="hero-panel glass">
         ${ring(pl.length ? learned / pl.length : 0, 52, `${pl.length ? Math.round(100 * learned / pl.length) : 0}%`, 10)}
@@ -168,22 +181,30 @@ function pageLeren() {
       <h2 class="h2">Instellingen</h2>
       <div class="group">
         <div class="setting"><div class="lbl">Oefenvorm</div>${seg('mode', [['quiz', 'Quiz'], ['kaarten', 'Flitskaarten']], s.mode)}
-          <div class="hint">${s.mode === 'quiz' ? 'Kies uit vier namen of vier foto’s. Nieuwe soorten zie je eerst voordat ze gevraagd worden.' : 'Bekijk de foto, bedenk de naam en draai de kaart om.'}</div></div>
+          <div class="hint">${s.mode === 'quiz' ? 'Kies uit vier namen of vier foto’s. Een nieuwe soort zie je eerst, daarna krijg je hem in dezelfde ronde twee keer terug.' : 'Bekijk de foto, bedenk de naam en draai de kaart om.'}</div></div>
         <div class="setting"><div class="lbl">Gebied</div>${seg('region', [['nl', 'Heel Nederland'], ['best', 'Rond Best']], s.region)}</div>
-        <div class="setting"><div class="lbl">Soorten per ronde</div>${seg('len', [[10, '10'], [20, '20'], [30, '30']], s.len)}</div>
+        <div class="setting"><div class="lbl">Vragen per ronde</div>${seg('len', [[10, '10'], [20, '20'], [30, '30']], s.len)}</div>
       </div>
-      <p class="foot-note">Nieuwe soorten komen in volgorde van hoe vaak ze worden gezien: de algemeenste eerst. Wat je fout doet komt snel terug, wat je kent pas na een paar dagen.</p>
+      <p class="foot-note">Nieuwe soorten komen in volgorde van hoe vaak ze worden gezien: de algemeenste eerst. Wat je fout doet komt snel terug, wat je kent pas na een paar dagen. Hoe beter je een soort kent, hoe meer de andere antwoorden erop lijken.</p>
     </section>
   </main>`;
 }
+function until(ms) {
+  const min = Math.round(ms / 60e3);
+  if (min < 1) return 'kan nu';
+  if (min < 60) return `over ${min} min`;
+  if (ms < 20 * HOUR) return `over ${Math.round(ms / HOUR)} uur`;
+  const days = Math.round(ms / DAY);
+  return days <= 1 ? 'morgen' : `over ${days} dagen`;
+}
 function seg(key, opts, cur) {
-  return `<div class="seg" role="tablist">${opts.map(([v, l]) => `<button role="tab" aria-selected="${v == cur}" class="${v == cur ? 'on' : ''}" data-act="set" data-key="${key}" data-val="${v}">${l}</button>`).join('')}</div>`;
+  return `<div class="seg" role="group">${opts.map(([v, l]) => `<button aria-pressed="${v == cur}" class="${v == cur ? 'on' : ''}" data-act="set" data-key="${key}" data-val="${v}">${l}</button>`).join('')}</div>`;
 }
 function streak() {
   const set = new Set(store.days);
   let n = 0; const d = new Date();
   if (!set.has(today())) d.setDate(d.getDate() - 1);
-  while (set.has(d.toISOString().slice(0, 10))) { n++; d.setDate(d.getDate() - 1); }
+  while (set.has(ymd(d))) { n++; d.setDate(d.getDate() - 1); }
   return n;
 }
 
@@ -356,7 +377,7 @@ function pageVoortgang() {
   const busy = SPECIES.filter(s => P(s.id)?.n && boxOf(s.id) < LEARNED).length;
   const due = SPECIES.filter(s => isDue(s, now)).length;
   const answers = Object.values(store.prog).reduce((a, p) => a + (p.n || 0), 0);
-  const hard = SPECIES.filter(s => P(s.id)?.miss).sort((a, b) => (P(b.id).miss / P(b.id).n) - (P(a.id).miss / P(a.id).n) || P(b.id).miss - P(a.id).miss).slice(0, 6);
+  const hard = hardest();
 
   return `<main class="page">
     ${navbar('Voortgang')}
@@ -367,6 +388,8 @@ function pageVoortgang() {
       <div class="stat" style="--c:var(--orange)"><div class="v">${due}</div><div class="l">Om te herhalen</div></div>
       <div class="stat" style="--c:var(--red)"><div class="v">${streak()}</div><div class="l">Dagen op rij</div></div>
     </div>
+
+    <div class="week" aria-label="Geoefend in de afgelopen zeven dagen">${weekStrip()}</div>
 
     <section class="block">
       <h2 class="h2">Per categorie</h2>
@@ -390,101 +413,191 @@ function pageVoortgang() {
       <div class="list">${hard.map(s => `<a class="row" href="#/soort/${s.id}" style="--inset:68px">
         <img class="av" loading="lazy" src="${img(s, 0, 'small')}" alt="">
         <span class="main"><div class="t">${esc(s.nl)}</div><div class="s">${P(s.id).miss} keer fout van de ${P(s.id).n}</div></span>${ICON.chev}</a>`).join('')}
+        <button class="row link" data-act="start-hard"><span class="main">Oefen deze soorten</span></button>
       </div></section>` : ''}
 
     <section class="block">
       <h2 class="h2">Over deze app</h2>
       <div class="list">
         <div class="row"><span class="main">Soorten</span><span class="detail">${SPECIES.length}</span></div>
-        <div class="row"><span class="main">Gegevens bijgewerkt</span><span class="detail">${esc(DATA_DATE)}</span></div>
+        <div class="row"><span class="main">Gegevens bijgewerkt</span><span class="detail">${esc(new Date(DATA_DATE).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }))}</span></div>
       </div>
       <p class="foot-note">Foto’s en waarnemingen komen van iNaturalist, met de licentie van de fotograaf. Teksten komen van de Nederlandstalige Wikipedia (CC BY-SA). Je voortgang blijft op dit apparaat.</p>
+    </section>
+
+    <section class="block">
+      <h2 class="h2">Reservekopie</h2>
+      <div class="list">
+        <button class="row link" data-act="export"><span class="main">Voortgang bewaren als bestand</span></button>
+        <label class="row link"><span class="main">Voortgang terugzetten uit bestand</span><input id="import" type="file" accept="application/json,.json" hidden></label>
+      </div>
+      <p class="foot-note">Je voortgang staat alleen op dit apparaat. Als je de app van je beginscherm verwijdert, is hij weg. Met een reservekopie kun je hem terugzetten.</p>
     </section>
 
     <section class="block"><div class="list"><button class="row danger" data-act="reset">Voortgang wissen</button></div></section>
   </main>`;
 }
 
+function hardest(n = 6) {
+  return SPECIES.filter(s => P(s.id)?.miss).sort((a, b) => (P(b.id).miss / P(b.id).n) - (P(a.id).miss / P(a.id).n) || P(b.id).miss - P(a.id).miss).slice(0, n);
+}
+function weekStrip() {
+  const set = new Set(store.days), d = new Date();
+  d.setDate(d.getDate() - 6);
+  let html = '';
+  for (let i = 0; i < 7; i++, d.setDate(d.getDate() + 1)) {
+    const on = set.has(ymd(d));
+    html += `<div class="wd ${on ? 'on' : ''} ${i === 6 ? 'today' : ''}"><i>${on ? ICON.check : ''}</i><span>${d.toLocaleDateString('nl-NL', { weekday: 'short' }).slice(0, 2)}</span></div>`;
+  }
+  return html;
+}
+
+// ---------- Reservekopie ----------
+async function exportProgress() {
+  const name = `Natuur-voortgang-${today()}.json`;
+  const text = JSON.stringify({ app: 'natuur', version: 1, saved: new Date().toISOString(), ...store });
+  const file = new File([text], name, { type: 'application/json' });
+  try {
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+  } catch (e) { if (e.name === 'AbortError') return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file); a.download = name;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10e3);
+}
+async function importProgress(file) {
+  try {
+    const d = JSON.parse(await file.text());
+    if (d.app !== 'natuur' || typeof d.prog !== 'object' || !d.settings) throw new Error('vorm');
+    const n = Object.keys(d.prog).length;
+    if (!confirm(`Deze reservekopie bevat ${plural(n, 'soort', 'soorten')} met voortgang. Je huidige voortgang wordt hierdoor vervangen. Doorgaan?`)) return;
+    store = { ...defaults(), prog: d.prog, days: Array.isArray(d.days) ? d.days : [], settings: { ...defaults().settings, ...d.settings } };
+    store.settings.cats = store.settings.cats.filter(c => CAT[c]);
+    if (!store.settings.cats.length) store.settings.cats = [...ALL_CATS];
+    save(); renderTab();
+  } catch { alert('Dit bestand is geen reservekopie van Natuur.'); }
+}
+
 // ---------- Sessie ----------
 let S = null;
 
-function buildSession() {
+// Een ronde bestaat uit `len` vragen. Herhalingen gaan voor; nieuwe soorten komen
+// met mate erbij en worden in dezelfde ronde twee keer gevraagd (eerst de naam, later de foto).
+function buildSession({ only = null } = {}) {
   const s = store.settings;
-  const pl = pool();
   const now = Date.now();
-  const L = Math.min(s.len, pl.length);
-  const seen = pl.filter(x => P(x.id)?.n);
-  const due = shuffle(seen.filter(x => isDue(x, now))).sort((a, b) => boxOf(a.id) - boxOf(b.id));
-  // nieuwe soorten: per categorie de algemeenste eerst, om en om over de categorieën
-  const byCat = {};
-  for (const x of pl.filter(x => !P(x.id)?.n)) (byCat[x.cat] ||= []).push(x);
-  Object.values(byCat).forEach(a => a.sort((p, q) => obsKey(q) - obsKey(p)));
-  const fresh = [];
-  const lists = shuffle(Object.values(byCat));
-  for (let i = 0; lists.some(a => a.length > i); i++) lists.forEach(a => a[i] && fresh.push(a[i]));
-  const learning = seen.filter(x => boxOf(x.id) < LEARNED).length;
-  const maxNew = learning > 25 ? Math.ceil(L * .2) : Math.ceil(L * .5);
-  const nNew = Math.min(fresh.length, Math.max(L - due.length, Math.min(maxNew, L)));
-  let items = [...due.slice(0, L - Math.min(nNew, L)), ...fresh.slice(0, nNew)];
-  if (items.length < L) {
-    const rest = seen.filter(x => !items.includes(x)).sort((a, b) => boxOf(a.id) - boxOf(b.id) || P(a.id).due - P(b.id).due);
-    items.push(...rest.slice(0, L - items.length));
-  }
-  items = shuffle(items.slice(0, L));
+  const L = s.len;
+  const perNew = s.mode === 'kaarten' ? 1 : 2;
+  let review, news = [];
 
+  if (only) {
+    review = shuffle(only);
+  } else {
+    const pl = pool();
+    const seen = pl.filter(x => P(x.id)?.n);
+    const due = shuffle(seen.filter(x => isDue(x, now))).sort((a, b) => boxOf(a.id) - boxOf(b.id));
+    // nieuwe soorten: per categorie de algemeenste eerst, om en om over de categorieën
+    const byCat = {};
+    for (const x of pl.filter(x => !P(x.id)?.n)) (byCat[x.cat] ||= []).push(x);
+    Object.values(byCat).forEach(a => a.sort((p, q) => obsKey(q) - obsKey(p)));
+    const fresh = [];
+    const lists = shuffle(Object.values(byCat));
+    for (let i = 0; lists.some(a => a.length > i); i++) lists.forEach(a => a[i] && fresh.push(a[i]));
+
+    const learning = seen.filter(x => boxOf(x.id) < LEARNED).length;
+    const newCap = Math.min(MAX_NEW, Math.ceil(L * (learning > 25 ? .1 : .3)));
+    const room = Math.max(L - due.length, due.length > 2 * L ? 0 : Math.ceil(L * .2));
+    let nNew = Math.min(fresh.length, newCap, Math.ceil(room / perNew));
+    review = due.slice(0, Math.max(0, L - nNew * perNew));
+    let short = L - nNew * perNew - review.length;
+    if (short > 0) { // aanvullen met wat je het minst goed kent
+      const rest = seen.filter(x => !review.includes(x)).sort((a, b) => boxOf(a.id) - boxOf(b.id) || P(a.id).due - P(b.id).due);
+      review.push(...rest.slice(0, short));
+      short = L - nNew * perNew - review.length;
+    }
+    if (short > 0) nNew = Math.min(fresh.length, MAX_NEW, nNew + Math.ceil(short / perNew)); // niet te veel nieuws tegelijk
+    news = fresh.slice(0, nNew);
+  }
+
+  const items = shuffle([...review.map(sp => ({ sp })), ...news.map(sp => ({ sp, isNew: true }))]);
   const steps = [];
   if (s.mode === 'kaarten') {
-    items.forEach(sp => steps.push({ type: 'card', sp, photo: Math.random() * sp.photos.length | 0 }));
+    items.forEach(({ sp }) => steps.push({ type: 'card', sp, photo: Math.random() * sp.photos.length | 0 }));
   } else {
+    // vragen over een nieuwe soort komen niet direct na de kennismaking maar een paar stappen later
     const pending = [];
-    const flush = force => {
-      for (let i = pending.length - 1; i >= 0; i--) if (force || --pending[i].wait <= 0) steps.push(pending.splice(i, 1)[0].q);
-    };
-    for (const sp of items) {
-      if (!P(sp.id)?.n) {
-        steps.push({ type: 'intro', sp, photo: 0 });
-        flush();
-        pending.push({ q: makeQuestion(sp, true), wait: 2 });
-      } else {
-        steps.push(makeQuestion(sp));
-        flush();
+    while (items.length || pending.length) {
+      const last = steps[steps.length - 1];
+      // volgorde: eerst de eerste vraag over een net getoonde soort, dan de volgende soort, dan de tweede vragen
+      const ready = pending.filter(q => q.at <= steps.length && (q.first || !items.length) && q.q.sp !== last?.sp).sort((a, b) => b.first - a.first || a.at - b.at)[0];
+      if (ready) { steps.push(ready.q); pending.splice(pending.indexOf(ready), 1); continue; }
+      if (items.length) {
+        const { sp, isNew } = items.shift();
+        if (isNew) {
+          steps.push({ type: 'intro', sp, photo: 0 });
+          pending.push({ q: makeQuestion(sp, { type: 'name', avoid: 0 }), at: steps.length + 1, first: true });
+          pending.push({ q: makeQuestion(sp, { type: 'pick' }), at: steps.length + 5, first: false });
+        } else steps.push(makeQuestion(sp));
+        continue;
       }
+      // niets meer om tussen te zetten: liever een andere soort dan dezelfde twee keer achter elkaar
+      const other = pending.filter(q => q.q.sp !== last?.sp || last?.type === 'intro').sort((a, b) => a.at - b.at)[0];
+      if (!other) break;
+      steps.push(other.q); pending.splice(pending.indexOf(other), 1);
     }
-    flush(true);
   }
-  return { steps, i: 0, results: [], retried: new Set(), mode: s.mode };
+  return { steps, i: 0, results: [], missed: new Set(), newCount: news.length, mode: s.mode, lock: 0, only };
 }
 
-function makeQuestion(sp, justIntroduced = false) {
-  const others = sp.photos.length > 1 ? sp.photos.map((_, i) => i).filter(i => !justIntroduced || i !== 0) : [0];
-  const type = !justIntroduced && Math.random() < .35 ? 'pick' : 'name';
+function makeQuestion(sp, { type, avoid = -1 } = {}) {
+  const idx = sp.photos.map((_, i) => i).filter(i => i !== avoid || sp.photos.length === 1);
+  type ||= Math.random() < .35 ? 'pick' : 'name';
   const opts = shuffle([sp, ...distractors(sp, 3)]);
-  return { type, sp, opts, photo: rnd(others), photos: opts.map(o => o === sp ? rnd(others) : Math.random() * o.photos.length | 0) };
+  return { type, sp, opts, photo: rnd(idx), photos: opts.map(o => o === sp ? rnd(idx) : Math.random() * o.photos.length | 0) };
 }
 
+// Afleiders worden lastiger naarmate je een soort beter kent. Voorrang voor soorten waar
+// jij hem zelf mee verwarde, dan waar anderen hem mee verwarren, dan naaste verwanten.
 function distractors(sp, n) {
+  const same = SPECIES.filter(o => o.cat === sp.cat && o.id !== sp.id);
   const shared = o => sp.anc.filter(a => o.anc.includes(a)).length;
-  const cands = shuffle(SPECIES.filter(o => o.cat === sp.cat && o.id !== sp.id)).sort((a, b) => shared(b) - shared(a));
-  const close = shuffle(cands.slice(0, 6)).slice(0, n - 1);
-  const far = shuffle(cands.filter(o => !close.includes(o))).slice(0, n - close.length);
-  return [...close, ...far];
+  const mine = Object.entries(P(sp.id)?.cf || {}).sort((a, b) => b[1] - a[1]).map(([id]) => BY_ID[id]).filter(Boolean);
+  const known = (INFO?.[sp.id]?.sim || []).map(x => BY_ID[x.id]).filter(Boolean);
+  const kin = shuffle(same).sort((a, b) => shared(b) - shared(a)).slice(0, 6);
+  const hard = [...new Set([...mine.slice(0, 2), ...shuffle([...known, ...kin])])].filter(o => o.id !== sp.id);
+  const box = boxOf(sp.id);
+  const out = hard.slice(0, Math.min(n, box >= LEARNED ? 3 : box >= 1 ? 2 : 1));
+  return [...out, ...shuffle(same.filter(o => !out.includes(o))).slice(0, n - out.length)];
 }
 
 function record(sp, ok) {
+  const now = Date.now();
   const p = store.prog[sp.id] ||= { b: 0, n: 0, ok: 0, miss: 0 };
   const first = p.n === 0;
+  const early = !first && p.due > now && p.b >= 2; // nog niet aan de beurt: goed antwoord telt niet als stap omhoog
+  const redo = S.missed.has(sp.id);                // deze ronde al fout gehad: eerst morgen opnieuw bewijzen
   p.n++;
-  if (ok) { p.ok++; p.b = Math.min(5, p.b + (first && S.mode === 'kaarten' ? 2 : 1)); }
-  else { p.miss++; p.b = 1; }
-  p.due = Date.now() + INTERVAL[p.b];
-  p.last = Date.now();
-  if (!store.days.includes(today())) store.days = [...store.days.slice(-400), today()];
+  if (ok) {
+    p.ok++;
+    if (redo) p.due = now + INTERVAL[1];
+    else if (!early) { p.b = Math.min(5, p.b + (first && S.mode === 'kaarten' ? 2 : 1)); p.due = now + INTERVAL[p.b]; }
+  } else {
+    p.miss++;
+    p.b = Math.max(1, p.b - 2);
+    p.due = now + INTERVAL[1];
+    S.missed.add(sp.id);
+  }
+  p.last = now;
+  if (!store.days.includes(today())) {
+    store.days = [...store.days.slice(-400), today()];
+    navigator.storage?.persist?.().catch(() => {});
+  }
   save();
 }
 
-function startSession() {
-  S = buildSession();
-  if (!S.steps.length) return;
+function startSession(opts) {
+  S = buildSession(opts);
+  if (!S.steps.length) { S = null; return; }
   S.steps.slice(0, 3).forEach(preload);
   const sh = $('#sheet');
   sh.hidden = false; sh.classList.remove('closing');
@@ -523,6 +636,7 @@ function renderStep() {
   const st = S.steps[S.i];
   st.answered = false;
   const sp = st.sp;
+  S.lock = Date.now() + 350; // voorkomt dat een dubbele tik meteen de volgende vraag beantwoordt
   preload(S.steps[S.i + 1]);
 
   if (st.type === 'intro') {
@@ -530,7 +644,7 @@ function renderStep() {
       ${photo(sp, st.photo, { tag: '<span class="cat new">Nieuwe soort</span>', cycle: true })}
       <h2 class="q-title">${esc(sp.nl)}<small>${esc(sp.sci)}</small></h2>
       <div class="tipbox">${esc(sp.tip)}</div>
-      <button class="more-hint" data-act="more">Meer over de ${esc(sp.nl.toLowerCase())}<svg viewBox="0 0 14 8"><path d="M1.5 1.5l5.5 5 5.5-5"/></svg></button></div>
+      <button class="more-hint" data-act="more">Meer over deze soort<svg viewBox="0 0 14 8"><path d="M1.5 1.5l5.5 5 5.5-5"/></svg></button></div>
       <div class="info" data-info="${sp.id}"></div>`,
       `<button class="btn" data-act="next">Volgende</button>`, { cls: 'intro' });
     fillInfo();
@@ -547,7 +661,7 @@ function renderStep() {
       `<button class="btn gray" data-act="dontknow">Weet ik niet</button>`);
   } else if (st.type === 'pick') {
     frame(`<div class="stage">
-      <h2 class="q-title">Welke foto is de ${esc(sp.nl.toLowerCase())}?</h2>
+      <h2 class="q-title">Op welke foto staat een ${esc(lc(sp.nl))}?</h2>
       <div class="grid4">${st.opts.map((o, k) => `<button class="pick" data-act="answer" data-id="${o.id}">
         <img src="${img(o, st.photos[k], 'medium')}" alt=""><span class="lbl">${esc(o.nl)}</span><span class="mark"></span></button>`).join('')}</div></div>`,
       `<button class="btn gray" data-act="dontknow">Weet ik niet</button>`);
@@ -558,30 +672,44 @@ function answer(id) {
   const st = S.steps[S.i];
   if (st.answered) return;
   st.answered = true;
-  const sp = st.sp, ok = id === sp.id;
+  S.lock = Date.now() + 400;
+  const sp = st.sp, ok = id === sp.id, chosen = BY_ID[id];
   const firstTry = !S.results.some(r => r.sp === sp);
+  const upcoming = S.steps.slice(S.i + 1).some(x => x.sp === sp && x.type !== 'intro');
+  const again = !ok && !S.missed.has(sp.id) && !upcoming;
   record(sp, ok);
+  if (!ok && chosen) { const p = P(sp.id); (p.cf ||= {})[id] = (p.cf[id] || 0) + 1; save(); }
   if (firstTry) S.results.push({ sp, ok });
-  const again = !ok && !S.retried.has(sp.id);
-  if (again) { S.retried.add(sp.id); S.steps.push(makeQuestion(sp, false)); }
+  if (again) S.steps.push(makeQuestion(sp));
 
   document.querySelectorAll('[data-act="answer"]').forEach(b => {
-    const isRight = b.dataset.id === sp.id, chosen = b.dataset.id === id;
+    const isRight = b.dataset.id === sp.id, mine = b.dataset.id === id;
     b.disabled = true;
     if (b.classList.contains('opt')) {
       if (isRight) { b.classList.add('right'); b.insertAdjacentHTML('beforeend', ICON.check); }
-      else if (chosen) { b.classList.add('wrong'); b.insertAdjacentHTML('beforeend', ICON.cross); }
+      else if (mine) { b.classList.add('wrong'); b.insertAdjacentHTML('beforeend', ICON.cross); }
       else b.classList.add('dim');
     } else {
       b.classList.add('show');
       if (isRight) { b.classList.add('right'); b.querySelector('.mark').innerHTML = ICON.check; }
-      else if (chosen) { b.classList.add('wrong'); b.querySelector('.mark').innerHTML = ICON.cross; }
+      else if (mine) { b.classList.add('wrong'); b.querySelector('.mark').innerHTML = ICON.cross; }
     }
   });
+  // na het antwoord mag je door de andere foto's bladeren
+  const ph = $('.q-photo');
+  if (ph && sp.photos.length > 1) {
+    ph.dataset.act = 'cycle';
+    ph.insertAdjacentHTML('beforeend', `<span class="more glass">${+ph.dataset.i + 1} / ${sp.photos.length}</span>`);
+  }
+  // bij een verkeerde naam: laat in de hoek zien hoe de gekozen soort er wél uitziet
+  if (ph && !ok && chosen && st.type === 'name') {
+    ph.classList.add('has-pip');
+    ph.insertAdjacentHTML('beforeend', `<div class="pip"><img src="${img(chosen, 0, 'small')}" alt=""><span><small>Jouw keuze</small>${esc(chosen.nl)}</span></div>`);
+  }
   $('.s-foot').innerHTML = `<div class="fb ${ok ? 'ok' : 'no'}">
     <div class="h">${ok ? ICON.check + 'Goed zo!' : id ? ICON.cross + 'Niet goed' : 'Het antwoord is'}</div>
     <div class="who">${esc(sp.nl)} <i>${esc(sp.sci)}</i></div>
-    <div class="tp">${esc(sp.tip)}${again ? ' Komt straks terug.' : ''}</div>
+    <div class="tp">${esc(sp.tip)}${again || (!ok && upcoming) ? ' Komt straks terug.' : ''}</div>
     <button class="btn" data-act="next">Doorgaan</button></div>`;
 }
 
@@ -595,10 +723,10 @@ function flip() {
 }
 function selfGrade(ok) {
   const st = S.steps[S.i];
+  const again = !ok && !S.missed.has(st.sp.id);
   record(st.sp, ok);
   if (!S.results.some(r => r.sp === st.sp)) S.results.push({ sp: st.sp, ok });
-  if (!ok && !S.retried.has(st.sp.id)) {
-    S.retried.add(st.sp.id);
+  if (again) {
     S.steps.push({ type: 'card', sp: st.sp, photo: (st.photo + 1) % st.sp.photos.length });
   }
   next();
@@ -613,6 +741,7 @@ function renderResult() {
       ${ring(frac, 150, `${good}/${n}`, 10)}
       <h2>${title}</h2>
       <p>${good} van de ${n} in één keer goed</p>
+      ${resultNote()}
     </div>
     <div class="result-list">${S.results.map(r => `<a class="row" href="#/soort/${r.sp.id}" data-act="close-to" style="--inset:68px">
       <img class="av" src="${img(r.sp, 0, 'small')}" alt="">
@@ -621,6 +750,14 @@ function renderResult() {
     `<button class="btn gray" data-act="close">Klaar</button><button class="btn" data-act="again">Nog een ronde</button>`,
     { two: true, scroll: true });
   $('.s-bar i').style.width = '100%';
+}
+
+function resultNote() {
+  const soon = SPECIES.filter(x => P(x.id)?.n && P(x.id).due <= Date.now() + DAY).length;
+  const parts = [];
+  if (S.newCount) parts.push(`${plural(S.newCount, 'nieuwe soort', 'nieuwe soorten')} leren kennen.`);
+  if (soon) parts.push(`Morgen ${soon === 1 ? 'staat er 1 soort' : `staan er ${soon} soorten`} klaar om te herhalen.`);
+  return parts.length ? `<p class="note">${parts.join(' ')}</p>` : '';
 }
 
 function preload(st) {
@@ -640,7 +777,9 @@ document.addEventListener('click', e => {
     return;
   }
   const s = store.settings;
-  switch (t.dataset.act) {
+  const act = t.dataset.act;
+  if (S && Date.now() < S.lock && ['answer', 'dontknow', 'next', 'flip', 'self'].includes(act)) return;
+  switch (act) {
     case 'cat-all': s.cats = [...ALL_CATS]; save(); renderTab(); break;
     case 'cat': {
       const id = t.dataset.id;
@@ -651,7 +790,9 @@ document.addEventListener('click', e => {
       save(); renderTab(); break;
     }
     case 'set': s[t.dataset.key] = t.dataset.key === 'len' ? +t.dataset.val : t.dataset.val; save(); renderTab(); break;
-    case 'start': case 'again': startSession(); break;
+    case 'start': case 'again': startSession(S?.only ? { only: hardest(10) } : undefined); break;
+    case 'start-hard': startSession({ only: hardest(10) }); break;
+    case 'export': exportProgress(); break;
     case 'close': closeSession(); break;
     case 'close-to': e.preventDefault(); { const h = t.getAttribute('href'); closeSession(); setTimeout(() => go(h), 280); } break;
     case 'next': next(); break;
@@ -679,6 +820,23 @@ document.addEventListener('click', e => {
       break;
   }
 });
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'import' && e.target.files[0]) importProgress(e.target.files[0]).finally(() => { e.target.value = ''; });
+});
+// Foto die niet laadt: probeer in de quiz een andere foto van dezelfde soort, verberg hem anders
+document.addEventListener('error', e => {
+  const t = e.target;
+  if (t.tagName !== 'IMG') return;
+  const q = t.closest('.q-photo');
+  const sp = S?.steps[S.i]?.sp;
+  if (q && sp && !q.dataset.retry && sp.photos.length > 1) {
+    q.dataset.retry = 1;
+    q.dataset.i = (+q.dataset.i + 1) % sp.photos.length;
+    t.src = img(sp, +q.dataset.i);
+    q.querySelector('.credit').textContent = credit(sp, +q.dataset.i);
+  } else t.classList.add('broken');
+}, true);
 
 window.addEventListener('hashchange', route);
 
