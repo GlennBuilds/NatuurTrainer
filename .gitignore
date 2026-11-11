@@ -1,2 +1,5 @@
 scripts/.cache.json
 .DS_Store
+CONTEXT.md
+DECISIONS.md
+AGENTS.md
