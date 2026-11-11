@@ -266,7 +266,7 @@ function renderDetail(s) {
   $('#app').innerHTML = `<main class="page detail-page push">
     ${navbar(s.nl, { back: true })}
     <div class="photo-hero">
-      <div class="gallery" id="gal">${s.photos.map((ph, i) => `<figure><img ${i > 1 ? 'loading="lazy"' : ''} src="${img(s, i)}" alt="${esc(s.nl)}, foto ${i + 1} van ${s.photos.length}"><figcaption>${ph.st ? `<b>${STAGE[ph.st]}.</b> ` : ''}${esc(credit(s, i))}</figcaption></figure>`).join('')}</div>
+      <div class="gallery" id="gal">${s.photos.map((ph, i) => `<figure><img class="main" ${i > 1 ? 'loading="lazy"' : ''} src="${img(s, i)}" alt="${esc(s.nl)}, foto ${i + 1} van ${s.photos.length}"><figcaption>${ph.st ? `<b>${STAGE[ph.st]}.</b> ` : ''}${esc(credit(s, i))}</figcaption></figure>`).join('')}</div>
       ${s.photos.length > 1 ? `<div class="dots glass" id="dots">${s.photos.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
     </div>
     <div class="sheet-body">
@@ -640,7 +640,7 @@ function frame(stage, foot = '', { two = false, scroll = false, cls = '' } = {})
 function photo(sp, i, { tag = '', cycle = false } = {}) {
   const more = cycle && sp.photos.length > 1;
   return `<div class="q-photo" ${more ? 'data-act="cycle"' : ''} data-i="${i}">
-    <img src="${img(sp, i)}" alt="Foto van de soort">
+    <img class="main" src="${img(sp, i)}" alt="Foto van de soort">
     ${tag}
     <span class="stg" ${stageOf(sp, i) ? '' : 'hidden'}>${stageOf(sp, i)}</span>
     ${more ? `<span class="more glass">${i + 1} / ${sp.photos.length}</span>` : ''}
@@ -688,7 +688,7 @@ function renderStep() {
     frame(`<div class="stage">
       <h2 class="q-title">Op welke foto staat een ${esc(lc(sp.nl))}?</h2>
       <div class="grid4">${st.opts.map((o, k) => `<button class="pick" data-act="answer" data-id="${o.id}">
-        <img src="${img(o, st.photos[k], 'medium')}" alt=""><span class="lbl">${esc(o.nl)}</span><span class="mark"></span></button>`).join('')}</div></div>`,
+        <img class="main" src="${img(o, st.photos[k], 'medium')}" alt=""><span class="lbl">${esc(o.nl)}</span><span class="mark"></span></button>`).join('')}</div></div>`,
       `<button class="btn gray" data-act="dontknow">Weet ik niet</button>`);
   }
 }
@@ -894,7 +894,7 @@ document.addEventListener('click', e => {
       const sp = S.steps[S.i].sp;
       const i = (+t.dataset.i + 1) % sp.photos.length;
       t.dataset.i = i;
-      t.querySelector('img').src = img(sp, i);
+      t.querySelector('img.main').src = img(sp, i);
       t.querySelector('.credit').textContent = credit(sp, i);
       const g = t.querySelector('.stg'); if (g) { g.textContent = stageOf(sp, i); g.hidden = !stageOf(sp, i); }
       const m = t.querySelector('.more'); if (m) m.textContent = `${i + 1} / ${sp.photos.length}`;
@@ -934,8 +934,8 @@ document.addEventListener('change', e => {
 // Foto die niet laadt: probeer in de quiz een andere foto van dezelfde soort, verberg hem anders
 document.addEventListener('error', e => {
   const t = e.target;
-  if (t.tagName !== 'IMG') return;
-  const q = t.closest('.q-photo');
+  if (t.tagName !== 'IMG' || t.classList.contains('bg')) return;
+  const q = t.classList.contains('main') && t.closest('.q-photo');
   const sp = S?.steps[S.i]?.sp;
   const spare = q && sp ? usable(sp).filter(i => i !== +q.dataset.i) : [];
   if (spare.length && !q.dataset.retry) {
@@ -944,6 +944,32 @@ document.addEventListener('error', e => {
     t.src = img(sp, +q.dataset.i);
     q.querySelector('.credit').textContent = credit(sp, +q.dataset.i);
   } else t.classList.add('broken');
+}, true);
+
+// Foto passend tonen: vullend zolang er weinig van afvalt; anders de hele foto
+// op een vervaagde achtergrond, zodat een dier of plant nooit half in beeld staat.
+const SHOW_MIN = 0.85; // minstens 85% van de breedte én de hoogte blijft zichtbaar (zie .fit in styles.css)
+function fitImg(im) {
+  const box = im.parentElement, w = box.clientWidth, h = box.clientHeight;
+  if (!im.naturalWidth || !w || !h) return;
+  const r = im.naturalWidth / im.naturalHeight, R = w / h;
+  const fit = Math.min(r, R) / Math.max(r, R) < SHOW_MIN;
+  box.classList.toggle('fit', fit);
+  if (!fit) return;
+  let bg = box.querySelector(':scope > img.bg');
+  if (!bg) { bg = document.createElement('img'); bg.className = 'bg'; bg.alt = ''; bg.setAttribute('aria-hidden', 'true'); box.prepend(bg); }
+  if (bg.src !== im.src) bg.src = im.src;
+}
+const fitRO = 'ResizeObserver' in window ? new ResizeObserver(list => list.forEach(e => {
+  if (!e.target.isConnected) return fitRO.unobserve(e.target);
+  const im = e.target.querySelector(':scope > img.main');
+  if (im) fitImg(im);
+})) : null;
+document.addEventListener('load', e => {
+  const im = e.target;
+  if (im.tagName !== 'IMG' || !im.classList.contains('main')) return;
+  fitImg(im);
+  fitRO?.observe(im.parentElement);
 }, true);
 
 window.addEventListener('hashchange', route);
