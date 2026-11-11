@@ -332,7 +332,13 @@ label.row { cursor: pointer; }
 .q-title { flex: none; font: 700 22px/1.2 var(--rounded); letter-spacing: .1px; margin: 2px 4px 0; }
 .q-title small { display: block; font: 400 15px -apple-system, system-ui; font-style: italic; color: var(--label2); margin-top: 3px; letter-spacing: -.2px; }
 
+.q-title small.plain { font-style: normal; }
 .opts { flex: none; display: grid; gap: 8px; }
+.opts.open .opt { animation: optIn .32s cubic-bezier(.2, .8, .2, 1) backwards; }
+.opts.open .opt:nth-child(2) { animation-delay: .04s; }
+.opts.open .opt:nth-child(3) { animation-delay: .08s; }
+.opts.open .opt:nth-child(4) { animation-delay: .12s; }
+@keyframes optIn { from { transform: translateY(14px); opacity: 0; } }
 .opt {
   min-height: 50px; padding: 8px 16px; border-radius: 16px; background: var(--bg2);
   text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 10px;

@@ -673,9 +673,9 @@ function renderStep() {
   } else if (st.type === 'name') {
     frame(`<div class="stage">
       ${photo(sp, st.photo, { tag: catTag(sp) })}
-      <h2 class="q-title">Welke soort is dit?</h2>
-      <div class="opts">${st.opts.map(o => `<button class="opt" data-act="answer" data-id="${o.id}"><span>${esc(o.nl)}</span></button>`).join('')}</div></div>`,
-      `<button class="btn gray" data-act="dontknow">Weet ik niet</button>`);
+      <h2 class="q-title">Welke soort is dit?<small id="think" class="plain">Bedenk eerst zelf de naam</small></h2>
+      <div class="opts" id="opts" hidden>${st.opts.map(o => `<button class="opt" data-act="answer" data-id="${o.id}"><span>${esc(o.nl)}</span></button>`).join('')}</div></div>`,
+      `<button class="btn gray" data-act="dontknow">Weet ik niet</button><button class="btn" data-act="reveal">Toon keuzes</button>`, { two: true });
   } else if (st.type === 'type') {
     frame(`<div class="stage">
       ${photo(sp, st.photo, { tag: catTag(sp) })}
@@ -787,6 +787,19 @@ function settle(ok, chosen, { skipped = false, near = false } = {}) {
     <button class="btn" data-act="next">Doorgaan</button></div>`;
 }
 
+// Keuzes eerst dichtgeklapt: je bedenkt de naam zelf en klapt dan de vier opties open
+function reveal() {
+  const o = $('#opts');
+  if (!o || !o.hidden) return;
+  o.hidden = false;
+  o.classList.add('open');
+  $('#think')?.remove();
+  const f = $('.s-foot');
+  f.classList.remove('two');
+  f.innerHTML = `<button class="btn gray" data-act="dontknow">Weet ik niet</button>`;
+  S.lock = Date.now() + 400; // een dubbele tik op "Toon keuzes" mag niet meteen "Weet ik niet" worden
+}
+
 function flip() {
   const sp = S.steps[S.i].sp;
   $('#ans').innerHTML = `<h2 class="q-title">${esc(sp.nl)}<small>${esc(sp.sci)}</small></h2>`;
@@ -852,7 +865,7 @@ document.addEventListener('click', e => {
   }
   const s = store.settings;
   const act = t.dataset.act;
-  if (S && Date.now() < S.lock && ['answer', 'dontknow', 'next', 'flip', 'self'].includes(act)) return;
+  if (S && Date.now() < S.lock && ['answer', 'dontknow', 'next', 'flip', 'self', 'reveal'].includes(act)) return;
   switch (act) {
     case 'cat-all': s.cats = [...ALL_CATS]; save(); renderTab(); break;
     case 'cat': {
@@ -874,6 +887,7 @@ document.addEventListener('click', e => {
     case 'answer': answer(t.dataset.id); break;
     case 'dontknow': answer(null); break;
     case 'check': submitTyped(); break;
+    case 'reveal': reveal(); break;
     case 'flip': flip(); break;
     case 'self': selfGrade(t.dataset.ok === '1'); break;
     case 'cycle': {
