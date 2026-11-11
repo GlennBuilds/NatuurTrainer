@@ -31,7 +31,7 @@ const ICON = {
 };
 
 // ---------- Opslag ----------
-const defaults = () => ({ settings: { cats: [...ALL_CATS], mode: 'quiz', region: 'nl', len: 10 }, prog: {}, days: [] });
+const defaults = () => ({ settings: { cats: [...ALL_CATS], mode: 'quiz', region: 'nl', len: 10, typen: 'aan' }, prog: {}, days: [] });
 let store = loadStore();
 function loadStore() {
   try {
@@ -55,7 +55,14 @@ const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')
 const today = () => ymd(new Date());
 // Foto's van volwassen dieren (zonder rups, pop, ei, larve). Zolang je een soort nog leert
 // krijg je alleen die te zien; ken je hem (niveau 3+), dan komen de andere stadia erbij.
+const STAGE = { rups: 'Rups', pop: 'Pop', ei: 'Eitjes', larve: 'Larve', nimf: 'Nimf', jong: 'Jong dier', detail: 'Detail' };
+const stageOf = (sp, i) => STAGE[sp.photos[i % sp.photos.length].st] || '';
 const adults = sp => { const a = sp.photos.map((_, i) => i).filter(i => !sp.photos[i].st); return a.length ? a : sp.photos.map((_, i) => i); };
+// Kies een foto uit de toegestane; ook bij geleerde soorten is het meestal een volwassen dier
+const pickPhoto = (sp, idx) => {
+  const ad = idx.filter(i => !sp.photos[i].st), other = idx.filter(i => sp.photos[i].st);
+  return !other.length || (ad.length && Math.random() < .7) ? rnd(ad) : rnd(other);
+};
 const usable = sp => boxOf(sp.id) >= LEARNED ? sp.photos.map((_, i) => i).filter(i => sp.photos[i].st !== 'detail') : adults(sp);
 const lc = s => s.charAt(0).toLowerCase() + s.slice(1);
 const plural = (n, one, more) => `${n} ${n === 1 ? one : more}`;
@@ -186,6 +193,8 @@ function pageLeren() {
       <div class="group">
         <div class="setting"><div class="lbl">Oefenvorm</div>${seg('mode', [['quiz', 'Quiz'], ['kaarten', 'Flitskaarten']], s.mode)}
           <div class="hint">${s.mode === 'quiz' ? 'Kies uit vier namen of vier foto’s. Een nieuwe soort zie je eerst, daarna krijg je hem in dezelfde ronde twee keer terug.' : 'Bekijk de foto, bedenk de naam en draai de kaart om.'}</div></div>
+        ${s.mode === 'quiz' ? `<div class="setting"><div class="lbl">Naam zelf typen</div>${seg('typen', [['aan', 'Aan'], ['uit', 'Uit']], s.typen)}
+          <div class="hint">Bij soorten die je al geleerd hebt typ je soms de naam, zonder keuzes. Een kleine typfout telt niet.</div></div>` : ''}
         <div class="setting"><div class="lbl">Gebied</div>${seg('region', [['nl', 'Heel Nederland'], ['best', 'Rond Best']], s.region)}</div>
         <div class="setting"><div class="lbl">Vragen per ronde</div>${seg('len', [[10, '10'], [20, '20'], [30, '30']], s.len)}</div>
       </div>
@@ -257,7 +266,7 @@ function renderDetail(s) {
   $('#app').innerHTML = `<main class="page detail-page push">
     ${navbar(s.nl, { back: true })}
     <div class="photo-hero">
-      <div class="gallery" id="gal">${s.photos.map((ph, i) => `<figure><img ${i > 1 ? 'loading="lazy"' : ''} src="${img(s, i)}" alt="${esc(s.nl)}, foto ${i + 1} van ${s.photos.length}"><figcaption>${esc(credit(s, i))}</figcaption></figure>`).join('')}</div>
+      <div class="gallery" id="gal">${s.photos.map((ph, i) => `<figure><img ${i > 1 ? 'loading="lazy"' : ''} src="${img(s, i)}" alt="${esc(s.nl)}, foto ${i + 1} van ${s.photos.length}"><figcaption>${ph.st ? `<b>${STAGE[ph.st]}.</b> ` : ''}${esc(credit(s, i))}</figcaption></figure>`).join('')}</div>
       ${s.photos.length > 1 ? `<div class="dots glass" id="dots">${s.photos.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
     </div>
     <div class="sheet-body">
@@ -526,7 +535,7 @@ function buildSession({ only = null } = {}) {
   const items = shuffle([...review.map(sp => ({ sp })), ...news.map(sp => ({ sp, isNew: true }))]);
   const steps = [];
   if (s.mode === 'kaarten') {
-    items.forEach(({ sp }) => steps.push({ type: 'card', sp, photo: rnd(usable(sp)) }));
+    items.forEach(({ sp }) => steps.push({ type: 'card', sp, photo: pickPhoto(sp, usable(sp)) }));
   } else {
     // vragen over een nieuwe soort komen niet direct na de kennismaking maar een paar stappen later
     const pending = [];
@@ -554,11 +563,13 @@ function buildSession({ only = null } = {}) {
 }
 
 function makeQuestion(sp, { type, avoid = -1 } = {}) {
+  const box = boxOf(sp.id);
+  if (!type && store.settings.typen === 'aan' && box >= LEARNED && Math.random() < (box >= 4 ? .7 : .4)) type = 'type';
   type ||= Math.random() < .35 ? 'pick' : 'name';
   let idx = type === 'pick' ? adults(sp) : usable(sp);
   if (idx.length > 1) idx = idx.filter(i => i !== avoid);
   const opts = shuffle([sp, ...distractors(sp, 3)]);
-  return { type, sp, opts, photo: rnd(idx), photos: opts.map(o => o === sp ? rnd(idx) : rnd(adults(o))) };
+  return { type, sp, opts, photo: pickPhoto(sp, idx), photos: opts.map(o => o === sp ? rnd(idx) : rnd(adults(o))) };
 }
 
 // Afleiders worden lastiger naarmate je een soort beter kent. Voorrang voor soorten waar
@@ -631,7 +642,8 @@ function photo(sp, i, { tag = '', cycle = false } = {}) {
   return `<div class="q-photo" ${more ? 'data-act="cycle"' : ''} data-i="${i}">
     <img src="${img(sp, i)}" alt="Foto van de soort">
     ${tag}
-    ${more ? `<span class="more glass">1 / ${sp.photos.length}</span>` : ''}
+    <span class="stg" ${stageOf(sp, i) ? '' : 'hidden'}>${stageOf(sp, i)}</span>
+    ${more ? `<span class="more glass">${i + 1} / ${sp.photos.length}</span>` : ''}
     <div class="credit">${esc(credit(sp, i))}</div></div>`;
 }
 const catTag = sp => `<span class="cat glass">${CAT[sp.cat].name}</span>`;
@@ -664,6 +676,14 @@ function renderStep() {
       <h2 class="q-title">Welke soort is dit?</h2>
       <div class="opts">${st.opts.map(o => `<button class="opt" data-act="answer" data-id="${o.id}"><span>${esc(o.nl)}</span></button>`).join('')}</div></div>`,
       `<button class="btn gray" data-act="dontknow">Weet ik niet</button>`);
+  } else if (st.type === 'type') {
+    frame(`<div class="stage">
+      ${photo(sp, st.photo, { tag: catTag(sp) })}
+      <h2 class="q-title">Welke soort is dit?</h2>
+      <form class="typer" id="typer"><input id="typed" type="text" placeholder="Typ de naam" aria-label="Naam van de soort"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done"></form></div>`,
+      `<button class="btn gray" data-act="dontknow">Weet ik niet</button><button class="btn" data-act="check">Controleer</button>`, { two: true });
+    $('#typed').focus({ preventScroll: true });
   } else if (st.type === 'pick') {
     frame(`<div class="stage">
       <h2 class="q-title">Op welke foto staat een ${esc(lc(sp.nl))}?</h2>
@@ -676,17 +696,7 @@ function renderStep() {
 function answer(id) {
   const st = S.steps[S.i];
   if (st.answered) return;
-  st.answered = true;
-  S.lock = Date.now() + 400;
-  const sp = st.sp, ok = id === sp.id, chosen = BY_ID[id];
-  const firstTry = !S.results.some(r => r.sp === sp);
-  const upcoming = S.steps.slice(S.i + 1).some(x => x.sp === sp && x.type !== 'intro');
-  const again = !ok && !S.missed.has(sp.id) && !upcoming;
-  record(sp, ok);
-  if (!ok && chosen) { const p = P(sp.id); (p.cf ||= {})[id] = (p.cf[id] || 0) + 1; save(); }
-  if (firstTry) S.results.push({ sp, ok });
-  if (again) S.steps.push(makeQuestion(sp));
-
+  const sp = st.sp;
   document.querySelectorAll('[data-act="answer"]').forEach(b => {
     const isRight = b.dataset.id === sp.id, mine = b.dataset.id === id;
     b.disabled = true;
@@ -700,6 +710,62 @@ function answer(id) {
       else if (mine) { b.classList.add('wrong'); b.querySelector('.mark').innerHTML = ICON.cross; }
     }
   });
+  settle(id === sp.id, BY_ID[id], { skipped: !id });
+}
+
+// ---------- Naam typen ----------
+const key = s => fold(s).replace(/[^a-z0-9]/g, '');
+// Bewerkingsafstand; twee verwisselde letters ("meerl") tellen als één fout
+function lev(a, b) {
+  let prev2 = [], prev = [...Array(b.length + 1).keys()];
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] !== b[j - 1]));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) cur[j] = Math.min(cur[j], prev2[j - 2] + 1);
+    }
+    prev2 = prev; prev = cur;
+  }
+  return prev[b.length];
+}
+// Goed is: de Nederlandse of wetenschappelijke naam, ook zonder "gewone", met hooguit een typfoutje.
+function judge(sp, text) {
+  const t = key(text);
+  const names = o => [o.nl, o.sci, o.nl.replace(/^gewo(ne|on) /i, '')].map(key);
+  const dist = o => Math.min(...names(o).map(n => lev(t, n)));
+  const tol = t.length <= 4 ? 0 : t.length <= 9 ? 1 : 2;
+  const d = dist(sp);
+  const exactOther = SPECIES.find(o => o !== sp && names(o).includes(t));
+  if (d === 0) return { ok: true };
+  if (exactOther) return { ok: false, chosen: exactOther };
+  if (d <= tol) return { ok: true, near: true };
+  return { ok: false, chosen: SPECIES.find(o => o !== sp && dist(o) <= tol) };
+}
+function submitTyped() {
+  const st = S.steps[S.i], inp = $('#typed');
+  if (!inp || st.answered) return;
+  const text = inp.value.trim();
+  if (!text) { inp.focus(); return; }
+  const j = judge(st.sp, text);
+  inp.classList.add(j.ok ? 'right' : 'wrong');
+  settle(j.ok, j.chosen, { near: j.near });
+}
+
+// Antwoord verwerken en de uitslag onderin tonen (voor keuzevragen en typvragen)
+function settle(ok, chosen, { skipped = false, near = false } = {}) {
+  const st = S.steps[S.i], sp = st.sp;
+  st.answered = true;
+  S.lock = Date.now() + 400;
+  const firstTry = !S.results.some(r => r.sp === sp);
+  const upcoming = S.steps.slice(S.i + 1).some(x => x.sp === sp && x.type !== 'intro');
+  const again = !ok && !S.missed.has(sp.id) && !upcoming;
+  record(sp, ok);
+  if (!ok && chosen) { const p = P(sp.id); (p.cf ||= {})[chosen.id] = (p.cf[chosen.id] || 0) + 1; save(); }
+  if (firstTry) S.results.push({ sp, ok });
+  if (again) S.steps.push(makeQuestion(sp));
+
+  const inp = $('#typed');
+  if (inp) { inp.disabled = true; inp.blur(); }
   // na het antwoord mag je door de andere foto's bladeren
   const ph = $('.q-photo');
   if (ph && sp.photos.length > 1) {
@@ -707,12 +773,15 @@ function answer(id) {
     ph.insertAdjacentHTML('beforeend', `<span class="more glass">${+ph.dataset.i + 1} / ${sp.photos.length}</span>`);
   }
   // bij een verkeerde naam: laat in de hoek zien hoe de gekozen soort er wél uitziet
-  if (ph && !ok && chosen && st.type === 'name') {
+  if (ph && !ok && chosen && st.type !== 'pick') {
     ph.classList.add('has-pip');
-    ph.insertAdjacentHTML('beforeend', `<div class="pip"><img src="${img(chosen, 0, 'small')}" alt=""><span><small>Jouw keuze</small>${esc(chosen.nl)}</span></div>`);
+    ph.insertAdjacentHTML('beforeend', `<div class="pip"><img src="${img(chosen, 0, 'small')}" alt=""><span><small>Jouw antwoord</small>${esc(chosen.nl)}</span></div>`);
   }
-  $('.s-foot').innerHTML = `<div class="fb ${ok ? 'ok' : 'no'}">
-    <div class="h">${ok ? ICON.check + 'Goed zo!' : id ? ICON.cross + 'Niet goed' : 'Het antwoord is'}</div>
+  const head = ok ? ICON.check + (near ? 'Goed, let op de spelling' : 'Goed zo!') : skipped ? 'Het antwoord is' : ICON.cross + 'Niet goed';
+  const f = $('.s-foot');
+  f.classList.remove('two');
+  f.innerHTML = `<div class="fb ${ok ? 'ok' : 'no'}">
+    <div class="h">${head}</div>
     <div class="who">${esc(sp.nl)} <i>${esc(sp.sci)}</i></div>
     <div class="tp">${esc(sp.tip)}${again || (!ok && upcoming) ? ' Komt straks terug.' : ''}</div>
     <button class="btn" data-act="next">Doorgaan</button></div>`;
@@ -732,7 +801,7 @@ function selfGrade(ok) {
   record(st.sp, ok);
   if (!S.results.some(r => r.sp === st.sp)) S.results.push({ sp: st.sp, ok });
   if (again) {
-    S.steps.push({ type: 'card', sp: st.sp, photo: rnd(usable(st.sp)) });
+    S.steps.push({ type: 'card', sp: st.sp, photo: pickPhoto(st.sp, usable(st.sp)) });
   }
   next();
 }
@@ -804,6 +873,7 @@ document.addEventListener('click', e => {
     case 'more': { const b = $('.s-body'); const inf = b.querySelector('.info'); b.scrollTo({ top: inf.getBoundingClientRect().top - b.getBoundingClientRect().top + b.scrollTop + 6, behavior: 'smooth' }); break; }
     case 'answer': answer(t.dataset.id); break;
     case 'dontknow': answer(null); break;
+    case 'check': submitTyped(); break;
     case 'flip': flip(); break;
     case 'self': selfGrade(t.dataset.ok === '1'); break;
     case 'cycle': {
@@ -812,6 +882,7 @@ document.addEventListener('click', e => {
       t.dataset.i = i;
       t.querySelector('img').src = img(sp, i);
       t.querySelector('.credit').textContent = credit(sp, i);
+      const g = t.querySelector('.stg'); if (g) { g.textContent = stageOf(sp, i); g.hidden = !stageOf(sp, i); }
       const m = t.querySelector('.more'); if (m) m.textContent = `${i + 1} / ${sp.photos.length}`;
       break;
     }
@@ -826,6 +897,23 @@ document.addEventListener('click', e => {
   }
 });
 
+document.addEventListener('submit', e => { if (e.target.id === 'typer') { e.preventDefault(); submitTyped(); } });
+
+// Toetsenbord op de iPhone: maak het oefenscherm zo hoog als wat er boven het toetsenbord
+// overblijft, zodat foto, invoerveld en knoppen in beeld blijven.
+const vv = window.visualViewport;
+function fitSheet() {
+  const sh = $('#sheet');
+  const typing = document.activeElement?.id === 'typed' && !sh.hidden;
+  sh.classList.toggle('kb', !!typing);
+  if (vv && typing) { sh.style.height = `${vv.height}px`; sh.style.top = `${vv.offsetTop}px`; sh.style.bottom = 'auto'; }
+  else sh.style.height = sh.style.top = sh.style.bottom = '';
+}
+vv?.addEventListener('resize', fitSheet);
+vv?.addEventListener('scroll', fitSheet);
+document.addEventListener('focusin', fitSheet);
+document.addEventListener('focusout', () => setTimeout(fitSheet, 60));
+
 document.addEventListener('change', e => {
   if (e.target.id === 'import' && e.target.files[0]) importProgress(e.target.files[0]).finally(() => { e.target.value = ''; });
 });
@@ -835,9 +923,10 @@ document.addEventListener('error', e => {
   if (t.tagName !== 'IMG') return;
   const q = t.closest('.q-photo');
   const sp = S?.steps[S.i]?.sp;
-  if (q && sp && !q.dataset.retry && sp.photos.length > 1) {
+  const spare = q && sp ? usable(sp).filter(i => i !== +q.dataset.i) : [];
+  if (spare.length && !q.dataset.retry) {
     q.dataset.retry = 1;
-    q.dataset.i = (+q.dataset.i + 1) % sp.photos.length;
+    q.dataset.i = spare[0];
     t.src = img(sp, +q.dataset.i);
     q.querySelector('.credit').textContent = credit(sp, +q.dataset.i);
   } else t.classList.add('broken');

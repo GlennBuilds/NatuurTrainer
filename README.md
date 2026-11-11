@@ -9,6 +9,8 @@ Leer-app (PWA) om de flora en fauna van Nederland en rond Best te leren herkenne
 - Quiz (foto → naam en naam → foto) of flitskaarten. Een nieuwe soort zie je eerst en krijg je in dezelfde ronde twee keer terug
 - Afleiders worden lastiger naarmate je een soort beter kent: eerst soorten waarmee je hem zelf verwarde, dan soorten waarmee anderen hem verwarren, dan naaste verwanten
 - Gespreide herhaling (5 niveaus): wat je fout doet komt snel terug, wat je kent pas na dagen. Goed antwoorden vóór een soort aan de beurt is telt niet als stap omhoog
+- Bij soorten die je al geleerd hebt typ je soms de naam zelf (uit te zetten); een kleine typfout telt niet
+- Zolang je een soort nog leert zie je alleen volwassen dieren; rupsen, poppen en larven komen later, met een label erbij. Het stadium per foto staat in `scripts/stadia.json` (met de hand nagekeken; het bouwscript meldt foto's die er nog niet in staan)
 - Reservekopie van je voortgang bewaren en terugzetten (tab Voortgang)
 - Filter *Rond Best*: alleen soorten die binnen 15 km zijn waargenomen op iNaturalist
 - Gids met foto's, herkenningstip en Wikipedia-tekst; voortgang per categorie

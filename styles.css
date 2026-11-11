@@ -261,6 +261,7 @@ button.row:active, a.row:active { background: var(--fill); }
 .gallery::-webkit-scrollbar { display: none; }
 .gallery figure { flex: 0 0 100%; margin: 0; scroll-snap-align: center; position: relative; }
 .gallery img { width: 100%; height: 100%; object-fit: cover; }
+.gallery figcaption b { font-weight: 700; }
 .gallery figcaption { position: absolute; left: 16px; right: 16px; bottom: 70px; font-size: 11px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.7); letter-spacing: 0; }
 .photo-hero .dots { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px 9px; border-radius: 12px; }
 .photo-hero .dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.45); transition: background .2s, width .25s; }
@@ -322,6 +323,8 @@ label.row { cursor: pointer; }
 .q-photo .cat { position: absolute; left: 10px; top: 10px; padding: 6px 11px; border-radius: 99px; font-size: 13px; font-weight: 600; color: var(--label); letter-spacing: -.08px; }
 .q-photo .cat.new { background: var(--blue); color: #fff; box-shadow: none; }
 .q-photo .more { position: absolute; right: 10px; top: 10px; padding: 6px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; color: var(--label); }
+.q-photo .stg { position: absolute; left: 10px; top: 46px; padding: 5px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; letter-spacing: 0; background: var(--orange); color: #fff; }
+.q-photo.has-pip .stg { display: none; }
 .q-photo .pip { position: absolute; left: 8px; bottom: 8px; width: 118px; height: min(84px, calc(100% - 16px)); border-radius: 15px; overflow: hidden; box-shadow: 0 0 0 2px #fff, 0 6px 18px rgba(0,0,0,.35); animation: fbIn .3s cubic-bezier(.2, .8, .2, 1); }
 .q-photo .pip span { position: absolute; inset: auto 0 0 0; padding: 14px 7px 5px; background: linear-gradient(transparent, rgba(0,0,0,.78)); color: #fff; font-size: 11.5px; font-weight: 600; line-height: 1.15; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .q-photo .pip small { display: block; font-size: 9.5px; font-weight: 500; opacity: .85; }
@@ -341,6 +344,19 @@ label.row { cursor: pointer; }
 .opt.dim { opacity: .4; }
 .opt svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
 @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+.typer { flex: none; margin: 0; }
+.typer input {
+  width: 100%; height: 52px; border-radius: 16px; border: 0; outline: 0; background: var(--bg2); color: var(--label);
+  font: inherit; font-weight: 500; letter-spacing: inherit; padding: 0 16px; -webkit-appearance: none; appearance: none;
+  box-shadow: inset 0 0 0 2px transparent; transition: box-shadow .2s, background .2s;
+}
+.typer input::placeholder { color: var(--label2); font-weight: 400; }
+.typer input:focus { box-shadow: inset 0 0 0 2px var(--accent); }
+.typer input:disabled { opacity: 1; }
+.typer input.right { background: var(--green); color: #fff; -webkit-text-fill-color: #fff; }
+.typer input.wrong { background: var(--red); color: #fff; -webkit-text-fill-color: #fff; animation: shake .4s; }
+.sheet.kb .s-foot { padding-bottom: 10px; }
 
 .grid4 { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; }
 .pick { position: relative; min-height: 0; border-radius: 20px; overflow: hidden; background: var(--fill); transition: transform .12s; }
