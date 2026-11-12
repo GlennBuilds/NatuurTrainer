@@ -327,6 +327,9 @@ def main():
                 "a": maker(ph.get("attribution") or ""),
                 "l": ph["license_code"].upper(),
             }
+            dim = ph.get("original_dimensions") or {}
+            if dim.get("width") and dim.get("height"):
+                item["r"] = round(dim["width"] / dim["height"], 2)  # verhouding breedte/hoogte
             stage = STADIA.get(str(ph.get("id")))
             if sp["cat"] in STADIA_CATS and stage is None:
                 unknown.append(f"{sp['nl']}: foto {ph.get('id')}")

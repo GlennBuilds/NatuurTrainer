@@ -64,7 +64,23 @@ const pickPhoto = (sp, idx) => {
   return !other.length || (ad.length && Math.random() < .7) ? rnd(ad) : rnd(other);
 };
 const usable = sp => boxOf(sp.id) >= LEARNED ? sp.photos.map((_, i) => i).filter(i => sp.photos[i].st !== 'detail') : adults(sp);
+const ratio = (sp, i = 0) => sp.photos[i % sp.photos.length].r || '';
 const lc = s => s.charAt(0).toLowerCase() + s.slice(1);
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+// Een "leerdag" begint om 04:00. Herhalingen van een dag of langer komen dan vrij,
+// zodat "morgen" ook echt morgen is en niet pas op het uur waarop je gisteren oefende.
+const dayFloor = t => { const d = new Date(t - 4 * HOUR); d.setHours(4, 0, 0, 0); return d.getTime(); };
+const dayNo = t => { const d = new Date(t - 4 * HOUR); return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAY); };
+const dueOf = p => p.due - (p.last || 0) >= 20 * HOUR ? dayFloor(p.due) : p.due;
+function when(t, now = Date.now()) {
+  const ms = t - now, days = dayNo(t) - dayNo(now);
+  if (days >= 2) return `over ${days} dagen`;
+  if (days === 1 && ms > 3 * HOUR) return 'morgen';
+  const min = Math.round(ms / 60e3);
+  if (min < 1) return 'nu';
+  if (min < 60) return `over ${min} min`;
+  return `over ${Math.round(ms / HOUR)} uur`;
+}
 const plural = (n, one, more) => `${n} ${n === 1 ? one : more}`;
 
 let SPECIES = [], BY_ID = {}, DATA_DATE = '';
@@ -78,7 +94,7 @@ function pool(settings = store.settings) {
   return SPECIES.filter(s => settings.cats.includes(s.cat) && (settings.region === 'nl' || s.bestObs > 0));
 }
 function obsKey(s) { return store.settings.region === 'best' ? s.bestObs * 50 + s.nlObs : s.nlObs; }
-function isDue(s, now = Date.now()) { const p = P(s.id); return p && p.n > 0 && p.due <= now; }
+function isDue(s, now = Date.now()) { const p = P(s.id); return p && p.n > 0 && dueOf(p) <= now; }
 function boxOf(id) { return P(id)?.b || 0; }
 function cover(cat) { return BY_ID[CAT[cat].cover] || SPECIES.find(s => s.cat === cat); }
 function dots5(id, cls = 'dots5') {
@@ -111,6 +127,7 @@ function setActiveTab(tab) {
 }
 
 function renderTab() {
+  shownDay = today();
   setActiveTab(view.tab);
   $('#app').innerHTML = { leren: pageLeren, gids: pageGids, voortgang: pageVoortgang }[view.tab]();
   window.scrollTo(0, view.scroll[view.tab] || 0);
@@ -138,16 +155,18 @@ function pageLeren() {
   const learned = pl.filter(x => boxOf(x.id) >= LEARNED).length;
   const due = pl.filter(x => isDue(x)).length;
   const all = s.cats.length === ALL_CATS.length;
-  const count = cat => SPECIES.filter(x => x.cat === cat && (s.region === 'nl' || x.bestObs > 0)).length;
+  // "8 van 60 geleerd" zodra je in een categorie iets geleerd hebt, anders het aantal soorten
+  const tally = list => { const l = list.filter(x => boxOf(x.id) >= LEARNED).length; return l ? `${l} van ${list.length} geleerd` : `${list.length} soorten`; };
+  const inCat = cat => SPECIES.filter(x => x.cat === cat && (s.region === 'nl' || x.bestObs > 0));
   const st = streak();
   const day = pl.length ? pl[hash(today() + s.cats.join()) % pl.length] : SPECIES[0];
   const dateTxt = new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
 
   const seen = pl.filter(x => P(x.id)?.n);
-  const nextDue = Math.min(...seen.map(x => P(x.id).due));
+  const nextDue = Math.min(...seen.map(x => dueOf(P(x.id))));
   const status = due ? plural(due, 'soort om te herhalen', 'soorten om te herhalen')
     : learned === pl.length && pl.length ? 'Alles geleerd, knap!'
-    : seen.length ? `Herhalen ${until(nextDue - Date.now())}`
+    : seen.length ? `Herhalen ${when(nextDue)}`
     : `${pl.length} nieuw`;
 
   return `<main class="page">
@@ -175,13 +194,13 @@ function pageLeren() {
       <div class="tiles ${all ? '' : 'some'}">
         <button class="tile wide ${all ? 'on' : ''}" data-act="cat-all">
           <span class="mosaic">${['eekhoorn', 'koolmees', 'dotterbloem', 'gehakkelde-aurelia'].filter(id => BY_ID[id]).map(id => `<img src="${img(BY_ID[id], 0, 'small')}" alt="">`).join('')}</span>
-          <span class="nm">Alles door elkaar<span class="ct">${pool({ ...s, cats: ALL_CATS }).length} soorten</span></span>
+          <span class="nm">Alles door elkaar<span class="ct">${tally(pool({ ...s, cats: ALL_CATS }))}</span></span>
           <span class="tick">${ICON.check}</span>
         </button>
         ${CATS.map(c => `
         <button class="tile ${!all && s.cats.includes(c.id) ? 'on' : ''}" data-act="cat" data-id="${c.id}" aria-pressed="${s.cats.includes(c.id)}">
           <img src="${img(cover(c.id), 0, 'medium')}" alt="" loading="lazy">
-          <span class="nm">${c.name}<span class="ct">${count(c.id)} soorten</span></span>
+          <span class="nm">${c.name}<span class="ct">${tally(inCat(c.id))}</span></span>
           <span class="tick">${ICON.check}</span>
         </button>`).join('')}
       </div>
@@ -192,7 +211,7 @@ function pageLeren() {
       <h2 class="h2">Instellingen</h2>
       <div class="group">
         <div class="setting"><div class="lbl">Oefenvorm</div>${seg('mode', [['quiz', 'Quiz'], ['kaarten', 'Flitskaarten']], s.mode)}
-          <div class="hint">${s.mode === 'quiz' ? 'Kies uit vier namen of vier foto’s. Een nieuwe soort zie je eerst, daarna krijg je hem in dezelfde ronde twee keer terug.' : 'Bekijk de foto, bedenk de naam en draai de kaart om.'}</div></div>
+          <div class="hint">${s.mode === 'quiz' ? 'Bedenk de naam bij een foto en kies dan uit vier namen, of kies de goede foto bij een naam. Een nieuwe soort zie je eerst; daarna komt hij in dezelfde ronde twee keer terug.' : 'Bekijk de foto, bedenk de naam en draai de kaart om.'}</div></div>
         ${s.mode === 'quiz' ? `<div class="setting"><div class="lbl">Naam zelf typen</div>${seg('typen', [['aan', 'Aan'], ['uit', 'Uit']], s.typen)}
           <div class="hint">Bij soorten die je al geleerd hebt typ je soms de naam, zonder keuzes. Een kleine typfout telt niet.</div></div>` : ''}
         <div class="setting"><div class="lbl">Gebied</div>${seg('region', [['nl', 'Heel Nederland'], ['best', 'Rond Best']], s.region)}</div>
@@ -201,14 +220,6 @@ function pageLeren() {
       <p class="foot-note">Nieuwe soorten komen in volgorde van hoe vaak ze worden gezien: de algemeenste eerst. Wat je fout doet komt snel terug, wat je kent pas na een paar dagen. Hoe beter je een soort kent, hoe meer de andere antwoorden erop lijken.</p>
     </section>
   </main>`;
-}
-function until(ms) {
-  const min = Math.round(ms / 60e3);
-  if (min < 1) return 'kan nu';
-  if (min < 60) return `over ${min} min`;
-  if (ms < 20 * HOUR) return `over ${Math.round(ms / HOUR)} uur`;
-  const days = Math.round(ms / DAY);
-  return days <= 1 ? 'morgen' : `over ${days} dagen`;
 }
 function seg(key, opts, cur) {
   return `<div class="seg" role="group">${opts.map(([v, l]) => `<button aria-pressed="${v == cur}" class="${v == cur ? 'on' : ''}" data-act="set" data-key="${key}" data-val="${v}">${l}</button>`).join('')}</div>`;
@@ -266,7 +277,7 @@ function renderDetail(s) {
   $('#app').innerHTML = `<main class="page detail-page push">
     ${navbar(s.nl, { back: true })}
     <div class="photo-hero">
-      <div class="gallery" id="gal">${s.photos.map((ph, i) => `<figure><img class="main" ${i > 1 ? 'loading="lazy"' : ''} src="${img(s, i)}" alt="${esc(s.nl)}, foto ${i + 1} van ${s.photos.length}"><figcaption>${ph.st ? `<b>${STAGE[ph.st]}.</b> ` : ''}${esc(credit(s, i))}</figcaption></figure>`).join('')}</div>
+      <div class="gallery" id="gal">${s.photos.map((ph, i) => `<figure><img class="main" data-r="${ph.r || ''}" ${i > 1 ? 'loading="lazy"' : ''} src="${img(s, i)}" alt="${esc(s.nl)}, foto ${i + 1} van ${s.photos.length}"><figcaption>${ph.st ? `<b>${STAGE[ph.st]}.</b> ` : ''}${esc(credit(s, i))}</figcaption></figure>`).join('')}</div>
       ${s.photos.length > 1 ? `<div class="dots glass" id="dots">${s.photos.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
     </div>
     <div class="sheet-body">
@@ -283,7 +294,8 @@ function renderDetail(s) {
         <h2 class="h2">Jouw voortgang</h2>
         <div class="list">
           <div class="row"><span class="main">Status</span><span class="detail">${status}</span></div>
-          <div class="row"><span class="main">Niveau</span>${dots5(s.id)}</div>
+          <div class="row"><span class="main">Niveau</span><span class="detail">${boxOf(s.id)} van 5</span>${dots5(s.id)}</div>
+          ${p?.n ? `<div class="row"><span class="main">Volgende herhaling</span><span class="detail">${isDue(s) ? 'Nu' : cap(when(dueOf(p)))}</span></div>` : ''}
           ${p?.n ? `<div class="row"><span class="main">Goed beantwoord</span><span class="detail">${p.ok} van ${p.n}</span></div>` : ''}
         </div>
       </div>
@@ -295,6 +307,7 @@ function renderDetail(s) {
   </main>`;
   window.scrollTo(0, 0);
   onScroll();
+  watchPhotos($('#app'));
   fillInfo();
   const gal = $('#gal'), dots = $('#dots');
   if (gal && dots) gal.addEventListener('scroll', () => {
@@ -391,6 +404,8 @@ function pageVoortgang() {
   const due = SPECIES.filter(s => isDue(s, now)).length;
   const answers = Object.values(store.prog).reduce((a, p) => a + (p.n || 0), 0);
   const hard = hardest();
+  const perLevel = [1, 2, 3, 4, 5].map(b => SPECIES.filter(s => P(s.id)?.n && boxOf(s.id) === b).length);
+  const LEVELS = [['Net gezien', '10 minuten'], ['Bezig met leren', '1 dag'], ['Geleerd', '3 dagen'], ['Goed gekend', '8 dagen'], ['Beheerst', '21 dagen']];
 
   return `<main class="page">
     ${navbar('Voortgang')}
@@ -418,7 +433,18 @@ function pageVoortgang() {
             <span class="detail">${l}/${items.length}</span>${ICON.chev}</a>`;
         }).join('')}
       </div>
-      <p class="foot-note">Een soort telt als geleerd als je hem drie keer goed hebt, verspreid over meerdere dagen. Je hebt in totaal ${plural(answers, 'antwoord', 'antwoorden')} gegeven.</p>
+      <p class="foot-note">Groen is geleerd, geel is waar je mee bezig bent. Je hebt in totaal ${plural(answers, 'antwoord', 'antwoorden')} gegeven.</p>
+    </section>
+
+    <section class="block">
+      <h2 class="h2">Niveaus</h2>
+      <div class="list">
+        ${LEVELS.map(([name, wait], i) => `<div class="row" style="--inset:60px">
+          <span class="lvn ${i + 1 >= LEARNED ? 'done' : ''}">${i + 1}</span>
+          <span class="main"><div class="t">${name}</div><div class="s">Komt na ${wait} terug</div></span>
+          <span class="detail">${perLevel[i]}</span></div>`).join('')}
+      </div>
+      <p class="foot-note">Een soort gaat een niveau omhoog als je hem goed hebt op het moment dat hij weer aan de beurt is. Tussendoor oefenen mag altijd, maar telt niet als stap omhoog. Bij een fout gaat hij twee niveaus terug. Vanaf niveau 3 telt een soort als geleerd.</p>
     </section>
 
     ${hard.length ? `<section class="block">
@@ -444,7 +470,7 @@ function pageVoortgang() {
         <button class="row link" data-act="export"><span class="main">Voortgang bewaren als bestand</span></button>
         <label class="row link"><span class="main">Voortgang terugzetten uit bestand</span><input id="import" type="file" accept="application/json,.json" hidden></label>
       </div>
-      <p class="foot-note">Je voortgang staat alleen op dit apparaat. Als je de app van je beginscherm verwijdert, is hij weg. Met een reservekopie kun je hem terugzetten.</p>
+      <p class="foot-note">${store.backup ? `Laatste reservekopie: ${new Date(store.backup + 'T12:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}.` : 'Je hebt nog geen reservekopie gemaakt.'} Je voortgang staat alleen op dit apparaat. Als je de app van je beginscherm verwijdert, is hij weg. Met een reservekopie kun je hem terugzetten.</p>
     </section>
 
     <section class="block"><div class="list"><button class="row danger" data-act="reset">Voortgang wissen</button></div></section>
@@ -470,13 +496,15 @@ async function exportProgress() {
   const name = `Natuur-voortgang-${today()}.json`;
   const text = JSON.stringify({ app: 'natuur', version: 1, saved: new Date().toISOString(), ...store });
   const file = new File([text], name, { type: 'application/json' });
+  const done = () => { store.backup = today(); save(); if (view.tab === 'voortgang' && !location.hash.startsWith('#/soort')) renderTab(); };
   try {
-    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file] }); done(); return; }
   } catch (e) { if (e.name === 'AbortError') return; }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(file); a.download = name;
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 10e3);
+  done();
 }
 async function importProgress(file) {
   try {
@@ -485,6 +513,7 @@ async function importProgress(file) {
     const n = Object.keys(d.prog).length;
     if (!confirm(`Deze reservekopie bevat ${plural(n, 'soort', 'soorten')} met voortgang. Je huidige voortgang wordt hierdoor vervangen. Doorgaan?`)) return;
     store = { ...defaults(), prog: d.prog, days: Array.isArray(d.days) ? d.days : [], settings: { ...defaults().settings, ...d.settings } };
+    if (typeof d.saved === 'string') store.backup = ymd(new Date(d.saved));
     store.settings.cats = store.settings.cats.filter(c => CAT[c]);
     if (!store.settings.cats.length) store.settings.cats = [...ALL_CATS];
     save(); renderTab();
@@ -524,7 +553,7 @@ function buildSession({ only = null } = {}) {
     review = due.slice(0, Math.max(0, L - nNew * perNew));
     let short = L - nNew * perNew - review.length;
     if (short > 0) { // aanvullen met wat je het minst goed kent
-      const rest = seen.filter(x => !review.includes(x)).sort((a, b) => boxOf(a.id) - boxOf(b.id) || P(a.id).due - P(b.id).due);
+      const rest = seen.filter(x => !review.includes(x)).sort((a, b) => boxOf(a.id) - boxOf(b.id) || dueOf(P(a.id)) - dueOf(P(b.id)));
       review.push(...rest.slice(0, short));
       short = L - nNew * perNew - review.length;
     }
@@ -590,18 +619,26 @@ function record(sp, ok) {
   const now = Date.now();
   const p = store.prog[sp.id] ||= { b: 0, n: 0, ok: 0, miss: 0 };
   const first = p.n === 0;
-  const early = !first && p.due > now && p.b >= 2; // nog niet aan de beurt: goed antwoord telt niet als stap omhoog
+  const early = !first && dueOf(p) > now && p.b >= 2; // nog niet aan de beurt: goed antwoord telt niet als stap omhoog
+  const from = p.b;
+  let kind = 'up';
   const redo = S.missed.has(sp.id);                // deze ronde al fout gehad: eerst morgen opnieuw bewijzen
   p.n++;
   if (ok) {
     p.ok++;
-    if (redo) p.due = now + INTERVAL[1];
-    else if (!early) { p.b = Math.min(5, p.b + (first && S.mode === 'kaarten' ? 2 : 1)); p.due = now + INTERVAL[p.b]; }
+    if (redo) { p.due = now + INTERVAL[1]; kind = 'redo'; }
+    else if (early) kind = 'early';
+    else {
+      p.b = Math.min(5, p.b + (first && S.mode === 'kaarten' ? 2 : 1));
+      p.due = now + INTERVAL[p.b];
+      if (INTERVAL[p.b] >= DAY) p.due = dayFloor(p.due);
+    }
   } else {
     p.miss++;
     p.b = Math.max(1, p.b - 2);
     p.due = now + INTERVAL[1];
     S.missed.add(sp.id);
+    kind = 'down';
   }
   p.last = now;
   if (!store.days.includes(today())) {
@@ -609,6 +646,7 @@ function record(sp, ok) {
     navigator.storage?.persist?.().catch(() => {});
   }
   save();
+  return { kind, from, to: p.b };
 }
 
 function startSession(opts) {
@@ -623,11 +661,12 @@ function startSession(opts) {
 function closeSession() {
   const sh = $('#sheet');
   sh.classList.add('closing');
-  setTimeout(() => { sh.hidden = true; sh.innerHTML = ''; document.body.classList.remove('locked'); S = null; route(); }, 260);
+  setTimeout(() => { sh.hidden = true; sh.innerHTML = ''; document.body.classList.remove('locked'); S = null; route(); maybeReload(); }, 260);
 }
 
 function frame(stage, foot = '', { two = false, scroll = false, cls = '' } = {}) {
   const total = S.steps.length;
+  $('#sheet').classList.remove('tight1', 'tight2', 'tight3');
   $('#sheet').innerHTML = `
     <div class="s-top">
       <button class="s-close" data-act="close" aria-label="Stoppen">${ICON.close}</button>
@@ -635,12 +674,13 @@ function frame(stage, foot = '', { two = false, scroll = false, cls = '' } = {})
     </div>
     <div class="s-body ${scroll ? 'scroll' : ''} ${cls}">${stage}</div>
     <div class="s-foot ${two ? 'two' : ''}">${foot}</div>`;
+  watchPhotos($('#sheet'));
 }
 
 function photo(sp, i, { tag = '', cycle = false } = {}) {
   const more = cycle && sp.photos.length > 1;
   return `<div class="q-photo" ${more ? 'data-act="cycle"' : ''} data-i="${i}">
-    <img class="main" src="${img(sp, i)}" alt="Foto van de soort">
+    <img class="main" data-r="${ratio(sp, i)}" src="${img(sp, i)}" alt="Foto van de soort">
     ${tag}
     <span class="stg" ${stageOf(sp, i) ? '' : 'hidden'}>${stageOf(sp, i)}</span>
     ${more ? `<span class="more glass">${i + 1} / ${sp.photos.length}</span>` : ''}
@@ -688,9 +728,29 @@ function renderStep() {
     frame(`<div class="stage">
       <h2 class="q-title">Op welke foto staat een ${esc(lc(sp.nl))}?</h2>
       <div class="grid4">${st.opts.map((o, k) => `<button class="pick" data-act="answer" data-id="${o.id}">
-        <img class="main" src="${img(o, st.photos[k], 'medium')}" alt=""><span class="lbl">${esc(o.nl)}</span><span class="mark"></span></button>`).join('')}</div></div>`,
+        <img class="main" data-r="${ratio(o, st.photos[k])}" src="${img(o, st.photos[k], 'medium')}" alt=""><span class="lbl">${esc(o.nl)}</span><span class="mark"></span></button>`).join('')}</div></div>`,
       `<button class="btn gray" data-act="dontknow">Weet ik niet</button>`);
+    layoutPicks(st);
   }
+}
+
+// Fotokeuze: de vier foto's in een raster van 2×2 of onder elkaar, net wat ze het grootst toont.
+// Op een hoog scherm zijn de tegels van een raster smal en hoog; liggende foto's blijven daar klein.
+function layoutPicks(st) {
+  const g = $('.grid4');
+  if (!g) return;
+  const W = g.clientWidth, H = g.clientHeight, gap = 8;
+  if (!W || !H) return;
+  const rs = st.opts.map((o, k) => +ratio(o, st.photos[k]) || 1.4);
+  // zichtbaar oppervlak van een foto in een tegel van w×h (zelfde regel als fitImg)
+  const shown = (r, w, h) => {
+    const R = w / h;
+    if (Math.min(r, R) / Math.max(r, R) >= SHOW_MIN) return w * h;
+    return r > R ? w * Math.min(h, w / r / SHOW_MIN) : h * Math.min(w, h * r / SHOW_MIN);
+  };
+  const total = (w, h) => rs.reduce((a, r) => a + shown(r, w, h), 0);
+  const rows = total(W, (H - 3 * gap) / 4) > 1.15 * total((W - gap) / 2, (H - gap) / 2);
+  g.classList.toggle('rows', rows);
 }
 
 function answer(id) {
@@ -759,13 +819,14 @@ function settle(ok, chosen, { skipped = false, near = false } = {}) {
   const firstTry = !S.results.some(r => r.sp === sp);
   const upcoming = S.steps.slice(S.i + 1).some(x => x.sp === sp && x.type !== 'intro');
   const again = !ok && !S.missed.has(sp.id) && !upcoming;
-  record(sp, ok);
+  const lv = record(sp, ok);
   if (!ok && chosen) { const p = P(sp.id); (p.cf ||= {})[chosen.id] = (p.cf[chosen.id] || 0) + 1; save(); }
   if (firstTry) S.results.push({ sp, ok });
   if (again) S.steps.push(makeQuestion(sp));
 
   const inp = $('#typed');
   if (inp) { inp.disabled = true; inp.blur(); }
+  $('#think')?.remove();
   // na het antwoord mag je door de andere foto's bladeren
   const ph = $('.q-photo');
   if (ph && sp.photos.length > 1) {
@@ -783,8 +844,29 @@ function settle(ok, chosen, { skipped = false, near = false } = {}) {
   f.innerHTML = `<div class="fb ${ok ? 'ok' : 'no'}">
     <div class="h">${head}</div>
     <div class="who">${esc(sp.nl)} <i>${esc(sp.sci)}</i></div>
-    <div class="tp">${esc(sp.tip)}${again || (!ok && upcoming) ? ' Komt straks terug.' : ''}</div>
+    <div class="tp">${esc(sp.tip)}</div>
+    <div class="lvl">${dots5(sp.id)}<span>${levelText(sp, lv, again || upcoming)}</span></div>
     <button class="btn" data-act="next">Doorgaan</button></div>`;
+  tighten();
+}
+// Past de vraag met de uitslag eronder niet meer op het scherm (klein toestel, lange namen),
+// dan worden eerst de niet-gekozen antwoorden compacter, daarna de foto, en als laatste vervalt de tip.
+function tighten() {
+  const body = $('.s-body'), stage = body?.querySelector('.stage');
+  if (!stage) return;
+  const fits = () => stage.lastElementChild.getBoundingClientRect().bottom <= body.getBoundingClientRect().bottom + 1;
+  for (const cls of ['tight1', 'tight2', 'tight3']) {
+    if (fits()) return;
+    $('#sheet').classList.add(cls);
+  }
+}
+// Wat het antwoord met het niveau deed en wanneer de soort terugkomt
+function levelText(sp, lv, soon) {
+  const p = P(sp.id);
+  const back = soon ? 'straks' : when(dueOf(p));
+  if (lv.kind === 'early') return `Niveau ${p.b} · telt ${back} weer mee`;
+  const learned = lv.kind === 'up' && lv.from < LEARNED && lv.to >= LEARNED;
+  return `Niveau ${p.b}${learned ? ', geleerd' : ''} · komt ${back} terug`;
 }
 
 // Keuzes eerst dichtgeklapt: je bedenkt de naam zelf en klapt dan de vier opties open
@@ -832,7 +914,7 @@ function renderResult() {
     </div>
     <div class="result-list">${S.results.map(r => `<a class="row" href="#/soort/${r.sp.id}" data-act="close-to" style="--inset:68px">
       <img class="av" src="${img(r.sp, 0, 'small')}" alt="">
-      <span class="main"><div class="t">${esc(r.sp.nl)}</div><div class="s"><i>${esc(r.sp.sci)}</i></div></span>
+      <span class="main"><div class="t">${esc(r.sp.nl)}</div><div class="s">Niveau ${boxOf(r.sp.id)} · ${isDue(r.sp) ? 'kan nu weer' : when(dueOf(P(r.sp.id)))}</div></span>
       <span class="${r.ok ? 'ok-ico' : 'no-ico'}">${r.ok ? ICON.check : ICON.cross}</span></a>`).join('')}</div>`,
     `<button class="btn gray" data-act="close">Klaar</button><button class="btn" data-act="again">Nog een ronde</button>`,
     { two: true, scroll: true });
@@ -840,7 +922,7 @@ function renderResult() {
 }
 
 function resultNote() {
-  const soon = SPECIES.filter(x => P(x.id)?.n && P(x.id).due <= Date.now() + DAY).length;
+  const soon = SPECIES.filter(x => P(x.id)?.n && dayNo(dueOf(P(x.id))) <= dayNo(Date.now()) + 1).length;
   const parts = [];
   if (S.newCount) parts.push(`${plural(S.newCount, 'nieuwe soort', 'nieuwe soorten')} leren kennen.`);
   if (soon) parts.push(`Morgen ${soon === 1 ? 'staat er 1 soort' : `staan er ${soon} soorten`} klaar om te herhalen.`);
@@ -894,7 +976,8 @@ document.addEventListener('click', e => {
       const sp = S.steps[S.i].sp;
       const i = (+t.dataset.i + 1) % sp.photos.length;
       t.dataset.i = i;
-      t.querySelector('img.main').src = img(sp, i);
+      const im = t.querySelector('img.main');
+      im.dataset.r = ratio(sp, i); im.src = img(sp, i); fitImg(im);
       t.querySelector('.credit').textContent = credit(sp, i);
       const g = t.querySelector('.stg'); if (g) { g.textContent = stageOf(sp, i); g.hidden = !stageOf(sp, i); }
       const m = t.querySelector('.more'); if (m) m.textContent = `${i + 1} / ${sp.photos.length}`;
@@ -941,7 +1024,9 @@ document.addEventListener('error', e => {
   if (spare.length && !q.dataset.retry) {
     q.dataset.retry = 1;
     q.dataset.i = spare[0];
+    t.dataset.r = ratio(sp, +q.dataset.i);
     t.src = img(sp, +q.dataset.i);
+    fitImg(t);
     q.querySelector('.credit').textContent = credit(sp, +q.dataset.i);
   } else t.classList.add('broken');
 }, true);
@@ -951,14 +1036,18 @@ document.addEventListener('error', e => {
 const SHOW_MIN = 0.85; // minstens 85% van de breedte én de hoogte blijft zichtbaar (zie .fit in styles.css)
 function fitImg(im) {
   const box = im.parentElement, w = box.clientWidth, h = box.clientHeight;
-  if (!im.naturalWidth || !w || !h) return;
-  const r = im.naturalWidth / im.naturalHeight, R = w / h;
+  // de verhouding staat in de gegevens, zodat de foto al goed staat voordat hij geladen is
+  const r = +im.dataset.r || (im.naturalWidth ? im.naturalWidth / im.naturalHeight : 0), R = w / h;
+  if (!r || !w || !h) return;
   const fit = Math.min(r, R) / Math.max(r, R) < SHOW_MIN;
   box.classList.toggle('fit', fit);
   if (!fit) return;
   let bg = box.querySelector(':scope > img.bg');
   if (!bg) { bg = document.createElement('img'); bg.className = 'bg'; bg.alt = ''; bg.setAttribute('aria-hidden', 'true'); box.prepend(bg); }
   if (bg.src !== im.src) bg.src = im.src;
+}
+function watchPhotos(root) {
+  root.querySelectorAll('img.main').forEach(im => { fitImg(im); fitRO?.observe(im.parentElement); });
 }
 const fitRO = 'ResizeObserver' in window ? new ResizeObserver(list => list.forEach(e => {
   if (!e.target.isConnected) return fitRO.unobserve(e.target);
@@ -973,6 +1062,35 @@ document.addEventListener('load', e => {
 }, true);
 
 window.addEventListener('hashchange', route);
+
+// ---------- Vers houden ----------
+// Een app op het beginscherm blijft vaak dagen in het geheugen staan. Kom je terug, dan
+// wordt het scherm ververst (nieuwe dag, herhalingen) en wordt gekeken of er een nieuwe versie is.
+const APP_V = new URL(import.meta.url).searchParams.get('v');
+let wantReload = false, hiddenAt = 0, checkedAt = Date.now(), shownDay = today();
+function maybeReload() {
+  if (wantReload && !S && document.visibilityState === 'visible' && document.activeElement?.tagName !== 'INPUT') location.reload();
+}
+async function checkVersion() {
+  if (!APP_V || Date.now() - checkedAt < 5 * 60e3) return;
+  checkedAt = Date.now();
+  try {
+    const html = await (await fetch('index.html', { cache: 'no-store' })).text();
+    const v = html.match(/app\.js\?v=(\d+)/)?.[1];
+    let tried = null;
+    try { tried = sessionStorage.getItem('natuur.reload'); } catch { /* geblokkeerd */ }
+    if (!v || v === APP_V || v === tried) return; // nooit twee keer herladen voor dezelfde versie
+    try { sessionStorage.setItem('natuur.reload', v); } catch { return; }
+    wantReload = true;
+    maybeReload();
+  } catch { /* geen verbinding: volgende keer */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') { hiddenAt = Date.now(); return; }
+  checkVersion();
+  const stale = today() !== shownDay || Date.now() - hiddenAt > 10 * 60e3;
+  if (stale && !S && SPECIES.length && ['leren', 'voortgang'].includes(view.tab) && !location.hash.startsWith('#/soort')) renderTab();
+});
 
 // ---------- Start ----------
 (async function init() {

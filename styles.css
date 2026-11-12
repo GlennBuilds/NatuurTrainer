@@ -60,7 +60,11 @@ body {
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
   touch-action: manipulation;
+  /* voelt als een app: lang drukken selecteert geen tekst en opent geen fotomenu */
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
+.panel p, .tipbox, .d-title, .d-sci, .fb .who, input { -webkit-user-select: text; user-select: text; }
+img { -webkit-user-drag: none; }
 body.locked { overflow: hidden; }
 button { font: inherit; color: inherit; letter-spacing: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
 a { color: inherit; text-decoration: none; }
@@ -221,6 +225,9 @@ button.row:active, a.row:active { background: var(--fill); }
 .row.link { color: var(--blue); }
 .av { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; flex: none; background: var(--fill); }
 .av.round { border-radius: 50%; }
+.lvn { width: 32px; height: 32px; border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 15px var(--rounded); letter-spacing: 0; background: rgba(255, 204, 0, .22); color: #A67C00; }
+.lvn.done { background: var(--accent-soft); color: var(--accent); }
+@media (prefers-color-scheme: dark) { .lvn { color: var(--yellow); } }
 .bar { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; margin-top: 7px; display: flex; }
 .bar i { display: block; height: 100%; }
 .dots5 { display: inline-flex; gap: 3px; }
@@ -350,6 +357,10 @@ label.row { cursor: pointer; }
 .opt.right { background: var(--green); color: #fff; }
 .opt.wrong { background: var(--red); color: #fff; animation: shake .4s; }
 .opt.dim { opacity: .4; }
+/* krap scherm na het antwoord (zie tighten in app.js) */
+.tight1 .opt.dim { min-height: 34px; padding-top: 5px; padding-bottom: 5px; font-size: 15px; }
+.tight2 .q-photo { min-height: 72px; }
+.tight3 .fb .tp { display: none; }
 .opt svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
 @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
 
@@ -367,6 +378,7 @@ label.row { cursor: pointer; }
 .sheet.kb .s-foot { padding-bottom: 10px; }
 
 .grid4 { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; }
+.grid4.rows { grid-template-columns: 1fr; grid-template-rows: repeat(4, 1fr); }
 .pick { position: relative; min-height: 0; border-radius: 20px; overflow: hidden; background: var(--fill); transition: transform .12s; }
 .pick:active { transform: scale(.97); }
 .pick img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -424,6 +436,8 @@ a.sim:active img { opacity: .75; }
 .fb .who { font-weight: 600; margin-top: 4px; }
 .fb .who i { font-weight: 400; color: var(--label2); }
 .fb .tp { color: var(--label2); font-size: 15px; letter-spacing: -.2px; margin-top: 2px; line-height: 1.35; }
+.fb .lvl { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; font-weight: 500; color: var(--label2); letter-spacing: -.08px; }
+.fb .lvl span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fb .btn { margin-top: 12px; }
 @keyframes fbIn { from { transform: translateY(30px); opacity: 0; } }
 
