@@ -103,7 +103,7 @@ function dots5(id, cls = 'dots5') {
 }
 function ring(frac, size, label, stroke = 9) {
   const r = 50 - stroke / 2 - 1, c = 2 * Math.PI * r;
-  return `<div class="ring" style="width:${size}px;height:${size}px"><svg viewBox="0 0 100 100"><circle class="bgc" cx="50" cy="50" r="${r}" stroke-width="${stroke}"/><circle class="fgc" cx="50" cy="50" r="${r}" stroke-width="${stroke}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - frac)}"/></svg><div class="pct">${label}</div></div>`;
+  return `<div class="ring" style="width:${size}px;height:${size}px"><svg viewBox="0 0 100 100"><circle class="bgc" cx="50" cy="50" r="${r}" stroke-width="${stroke}"/><circle class="fgc" cx="50" cy="50" r="${r}" stroke-width="${stroke}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - frac)}" style="--len:${c}"/></svg><div class="pct">${label}</div></div>`;
 }
 function hash(str) { let h = 2166136261; for (const ch of str) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 
@@ -405,19 +405,30 @@ function pageVoortgang() {
   const answers = Object.values(store.prog).reduce((a, p) => a + (p.n || 0), 0);
   const hard = hardest();
   const perLevel = [1, 2, 3, 4, 5].map(b => SPECIES.filter(s => P(s.id)?.n && boxOf(s.id) === b).length);
+  const total = SPECIES.length, unseen = SPECIES.filter(s => !P(s.id)?.n).length, st = streak();
   const LEVELS = [['Net gezien', '10 minuten'], ['Bezig met leren', '1 dag'], ['Geleerd', '3 dagen'], ['Goed gekend', '8 dagen'], ['Beheerst', '21 dagen']];
 
   return `<main class="page">
     ${navbar('Voortgang')}
     <div class="head"><h1 class="large-title">Voortgang</h1></div>
-    <div class="stats">
-      <div class="stat" style="--c:var(--accent)"><div class="v">${learned}</div><div class="l">Geleerd</div></div>
-      <div class="stat" style="--c:#D4A000"><div class="v">${busy}</div><div class="l">Mee bezig</div></div>
-      <div class="stat" style="--c:var(--orange)"><div class="v">${due}</div><div class="l">Om te herhalen</div></div>
-      <div class="stat" style="--c:var(--red)"><div class="v">${streak()}</div><div class="l">Dagen op rij</div></div>
-    </div>
+    <section class="summary">
+      <h2 class="sum-h">${learned} van ${total} soorten geleerd</h2>
+      <p class="sum-s">${busy ? `Met ${plural(busy, 'soort', 'soorten')} ben je bezig` : 'Je bent nog nergens mee bezig'}${due ? `, ${due === 1 ? '1 is' : `${due} zijn`} aan de beurt` : ''}.</p>
+      <div class="spectrum" role="img" aria-label="Verdeling van de soorten over de niveaus: ${perLevel.map((n, i) => `niveau ${i + 1}: ${n}`).join(', ')}, nog niet gezien: ${unseen}">
+        ${[5, 4, 3, 2, 1].map(b => perLevel[b - 1] ? `<i style="flex-grow:${perLevel[b - 1]};background:var(--lv${b})"></i>` : '').join('')}
+        ${unseen ? `<i class="rest" style="flex-grow:${unseen}"></i>` : ''}
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="lg-t">Niveau</span>
+        ${[5, 4, 3, 2, 1].map(b => `<span><i style="background:var(--lv${b})"></i>${b}</span>`).join('')}
+        <span class="lg-r"><i class="rest"></i>Nog niet gezien</span>
+      </div>
+    </section>
 
-    <div class="week" aria-label="Geoefend in de afgelopen zeven dagen">${weekStrip()}</div>
+    <section class="weekcard">
+      <div class="wk-h"><b>${st ? plural(st, 'dag', 'dagen') + ' op rij' : 'Nog geen reeks'}</b><span>${store.days.includes(today()) ? 'Vandaag geoefend' : st ? 'Oefen vandaag om door te gaan' : 'Begin vandaag'}</span></div>
+      <div class="week" aria-label="Geoefend in de afgelopen zeven dagen">${weekStrip()}</div>
+    </section>
 
     <section class="block">
       <h2 class="h2">Per categorie</h2>
@@ -440,7 +451,7 @@ function pageVoortgang() {
       <h2 class="h2">Niveaus</h2>
       <div class="list">
         ${LEVELS.map(([name, wait], i) => `<div class="row" style="--inset:60px">
-          <span class="lvn ${i + 1 >= LEARNED ? 'done' : ''}">${i + 1}</span>
+          <span class="lvn" style="--c:var(--lv${i + 1})">${i + 1}</span>
           <span class="main"><div class="t">${name}</div><div class="s">Komt na ${wait} terug</div></span>
           <span class="detail">${perLevel[i]}</span></div>`).join('')}
       </div>
@@ -931,8 +942,9 @@ function resultNote() {
 
 function preload(st) {
   if (!st) return;
-  if (st.type === 'pick') st.opts.forEach((o, k) => { new Image().src = img(o, st.photos[k], 'medium'); });
-  else new Image().src = img(st.sp, st.photo);
+  const get = url => { const im = new Image(); im.onload = () => LOADED.add(im.src); im.src = url; };
+  if (st.type === 'pick') st.opts.forEach((o, k) => get(img(o, st.photos[k], 'medium')));
+  else get(img(st.sp, st.photo));
 }
 
 // ---------- Interactie ----------
@@ -1041,13 +1053,23 @@ function fitImg(im) {
   if (!r || !w || !h) return;
   const fit = Math.min(r, R) / Math.max(r, R) < SHOW_MIN;
   box.classList.toggle('fit', fit);
+  // fh: vervaagde stroken boven en onder; fw: links en rechts. --s is de maat van de foto zelf,
+  // daarmee laat de stylesheet de rand zacht overlopen in de achtergrond.
+  box.classList.toggle('fh', fit && r > R);
+  box.classList.toggle('fw', fit && r <= R);
   if (!fit) return;
+  im.style.setProperty('--s', `${r > R ? w / r : h * r}px`);
   let bg = box.querySelector(':scope > img.bg');
   if (!bg) { bg = document.createElement('img'); bg.className = 'bg'; bg.alt = ''; bg.setAttribute('aria-hidden', 'true'); box.prepend(bg); }
   if (bg.src !== im.src) bg.src = im.src;
 }
+// Een foto die nog moet laden faadt in; wat al geladen is staat er meteen
+const LOADED = new Set();
 function watchPhotos(root) {
-  root.querySelectorAll('img.main').forEach(im => { fitImg(im); fitRO?.observe(im.parentElement); });
+  root.querySelectorAll('img.main').forEach(im => {
+    if (LOADED.has(im.src) || (im.complete && im.naturalWidth)) im.classList.add('ld');
+    fitImg(im); fitRO?.observe(im.parentElement);
+  });
 }
 const fitRO = 'ResizeObserver' in window ? new ResizeObserver(list => list.forEach(e => {
   if (!e.target.isConnected) return fitRO.unobserve(e.target);
@@ -1056,7 +1078,10 @@ const fitRO = 'ResizeObserver' in window ? new ResizeObserver(list => list.forEa
 })) : null;
 document.addEventListener('load', e => {
   const im = e.target;
-  if (im.tagName !== 'IMG' || !im.classList.contains('main')) return;
+  if (im.tagName !== 'IMG') return;
+  LOADED.add(im.src);
+  if (!im.classList.contains('main')) return;
+  im.classList.add('ld');
   fitImg(im);
   fitRO?.observe(im.parentElement);
 }, true);

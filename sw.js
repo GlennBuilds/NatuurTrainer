@@ -1,5 +1,5 @@
 // Service worker: de app start snel en werkt ook zonder verbinding.
-const V = 20; // ophogen bij elke wijziging (scripts/versie.py doet dit, ook in index.html)
+const V = 21; // ophogen bij elke wijziging (scripts/versie.py doet dit, ook in index.html)
 const VERSION = `natuur-v${V}`;
 const SHELL = ['./', 'index.html', `styles.css?v=${V}`, `app.js?v=${V}`, 'data/species.json', 'data/info.json?v=1', 'manifest.webmanifest', 'icons/icon.svg', 'icons/apple-touch-icon.png'];
 const IMG_CACHE = 'natuur-img-2';
