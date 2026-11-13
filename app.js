@@ -28,6 +28,7 @@ const ICON = {
   play: '<svg viewBox="0 0 24 24"><path d="M7 4.8v14.4a1.2 1.2 0 0 0 1.8 1l11.5-7.2a1.2 1.2 0 0 0 0-2L8.8 3.8A1.2 1.2 0 0 0 7 4.8Z"/></svg>',
   search: '<svg viewBox="0 0 24 24"><path d="M10 3a7 7 0 0 1 5.6 11.2l4.6 4.6a1 1 0 0 1-1.4 1.4l-4.6-4.6A7 7 0 1 1 10 3Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z"/></svg>',
   close: '<svg viewBox="0 0 12 12"><path d="M1.5 1.5l9 9M10.5 1.5l-9 9"/></svg>',
+  expand: '<svg viewBox="0 0 24 24"><path d="M14.5 4H20v5.5M9.5 20H4v-5.5M20 4l-6 6M4 20l6-6"/></svg>',
 };
 
 // ---------- Opslag ----------
@@ -277,7 +278,7 @@ function renderDetail(s) {
   $('#app').innerHTML = `<main class="page detail-page push">
     ${navbar(s.nl, { back: true })}
     <div class="photo-hero">
-      <div class="gallery" id="gal">${s.photos.map((ph, i) => `<figure><img class="main" data-r="${ph.r || ''}" ${i > 1 ? 'loading="lazy"' : ''} src="${img(s, i)}" alt="${esc(s.nl)}, foto ${i + 1} van ${s.photos.length}"><figcaption>${ph.st ? `<b>${STAGE[ph.st]}.</b> ` : ''}${esc(credit(s, i))}</figcaption></figure>`).join('')}</div>
+      <div class="gallery" id="gal">${s.photos.map((ph, i) => `<figure data-act="zoom" data-k="${i}"><img class="main" data-r="${ph.r || ''}" ${i > 1 ? 'loading="lazy"' : ''} src="${img(s, i)}" alt="${esc(s.nl)}, foto ${i + 1} van ${s.photos.length}"><figcaption>${ph.st ? `<b>${STAGE[ph.st]}.</b> ` : ''}${esc(credit(s, i))}</figcaption></figure>`).join('')}</div>
       ${s.photos.length > 1 ? `<div class="dots glass" id="dots">${s.photos.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
     </div>
     <div class="sheet-body">
@@ -689,12 +690,13 @@ function frame(stage, foot = '', { two = false, scroll = false, cls = '' } = {})
 }
 
 function photo(sp, i, { tag = '', cycle = false } = {}) {
-  const more = cycle && sp.photos.length > 1;
-  return `<div class="q-photo" ${more ? 'data-act="cycle"' : ''} data-i="${i}">
+  const more = cycle && usable(sp).length > 1;
+  return `<div class="q-photo" data-act="zoom" data-i="${i}">
     <img class="main" data-r="${ratio(sp, i)}" src="${img(sp, i)}" alt="Foto van de soort">
     ${tag}
     <span class="stg" ${stageOf(sp, i) ? '' : 'hidden'}>${stageOf(sp, i)}</span>
-    ${more ? `<span class="more glass">${i + 1} / ${sp.photos.length}</span>` : ''}
+    ${more ? `<span class="more glass">${Math.max(0, usable(sp).indexOf(i)) + 1} / ${usable(sp).length}</span>` : ''}
+    <span class="zbtn glass" aria-hidden="true">${ICON.expand}</span>
     <div class="credit">${esc(credit(sp, i))}</div></div>`;
 }
 const catTag = sp => `<span class="cat glass">${CAT[sp.cat].name}</span>`;
@@ -739,7 +741,8 @@ function renderStep() {
     frame(`<div class="stage">
       <h2 class="q-title">Op welke foto staat een ${esc(lc(sp.nl))}?</h2>
       <div class="grid4">${st.opts.map((o, k) => `<button class="pick" data-act="answer" data-id="${o.id}">
-        <img class="main" data-r="${ratio(o, st.photos[k])}" src="${img(o, st.photos[k], 'medium')}" alt=""><span class="lbl">${esc(o.nl)}</span><span class="mark"></span></button>`).join('')}</div></div>`,
+        <img class="main" data-r="${ratio(o, st.photos[k])}" src="${img(o, st.photos[k], 'medium')}" alt=""><span class="lbl">${esc(o.nl)}</span><span class="mark"></span>
+        <span class="zbtn glass" data-act="zoom" aria-hidden="true">${ICON.expand}</span></button>`).join('')}</div></div>`,
       `<button class="btn gray" data-act="dontknow">Weet ik niet</button>`);
     layoutPicks(st);
   }
@@ -764,13 +767,15 @@ function layoutPicks(st) {
   g.classList.toggle('rows', rows);
 }
 
+const o2 = id => BY_ID[id]?.nl || '';
 function answer(id) {
   const st = S.steps[S.i];
   if (st.answered) return;
   const sp = st.sp;
   document.querySelectorAll('[data-act="answer"]').forEach(b => {
     const isRight = b.dataset.id === sp.id, mine = b.dataset.id === id;
-    b.disabled = true;
+    if (b.classList.contains('opt')) b.disabled = true;
+    else { b.dataset.act = 'zoom'; b.setAttribute('aria-label', `${o2(b.dataset.id)}, foto vergroten`); }
     if (b.classList.contains('opt')) {
       if (isRight) { b.classList.add('right'); b.insertAdjacentHTML('beforeend', ICON.check); }
       else if (mine) { b.classList.add('wrong'); b.insertAdjacentHTML('beforeend', ICON.cross); }
@@ -838,11 +843,11 @@ function settle(ok, chosen, { skipped = false, near = false } = {}) {
   const inp = $('#typed');
   if (inp) { inp.disabled = true; inp.blur(); }
   $('#think')?.remove();
-  // na het antwoord mag je door de andere foto's bladeren
+  // na het antwoord mag je in de vergroting door de andere foto's bladeren
   const ph = $('.q-photo');
-  if (ph && sp.photos.length > 1) {
-    ph.dataset.act = 'cycle';
-    ph.insertAdjacentHTML('beforeend', `<span class="more glass">${+ph.dataset.i + 1} / ${sp.photos.length}</span>`);
+  const idx = usable(sp);
+  if (ph && idx.length > 1 && !ph.querySelector('.more')) {
+    ph.insertAdjacentHTML('beforeend', `<span class="more glass">${Math.max(0, idx.indexOf(+ph.dataset.i)) + 1} / ${idx.length}</span>`);
   }
   // bij een verkeerde naam: laat in de hoek zien hoe de gekozen soort er wél uitziet
   if (ph && !ok && chosen && st.type !== 'pick') {
@@ -894,6 +899,7 @@ function reveal() {
 }
 
 function flip() {
+  S.steps[S.i].flipped = true;
   const sp = S.steps[S.i].sp;
   $('#ans').innerHTML = `<h2 class="q-title">${esc(sp.nl)}<small>${esc(sp.sci)}</small></h2>`;
   $('#ans').insertAdjacentHTML('afterend', `<div class="tipbox">${esc(sp.tip)}</div>`);
@@ -959,6 +965,7 @@ document.addEventListener('click', e => {
   }
   const s = store.settings;
   const act = t.dataset.act;
+  if (Z.open || Date.now() < Z.quiet) return; // vergroting open of net dicht: geen tik doorlaten naar de quiz
   if (S && Date.now() < S.lock && ['answer', 'dontknow', 'next', 'flip', 'self', 'reveal'].includes(act)) return;
   switch (act) {
     case 'cat-all': s.cats = [...ALL_CATS]; save(); renderTab(); break;
@@ -984,17 +991,7 @@ document.addEventListener('click', e => {
     case 'reveal': reveal(); break;
     case 'flip': flip(); break;
     case 'self': selfGrade(t.dataset.ok === '1'); break;
-    case 'cycle': {
-      const sp = S.steps[S.i].sp;
-      const i = (+t.dataset.i + 1) % sp.photos.length;
-      t.dataset.i = i;
-      const im = t.querySelector('img.main');
-      im.dataset.r = ratio(sp, i); im.src = img(sp, i); fitImg(im);
-      t.querySelector('.credit').textContent = credit(sp, i);
-      const g = t.querySelector('.stg'); if (g) { g.textContent = stageOf(sp, i); g.hidden = !stageOf(sp, i); }
-      const m = t.querySelector('.more'); if (m) m.textContent = `${i + 1} / ${sp.photos.length}`;
-      break;
-    }
+    case 'zoom': zoomFrom(t); break;
     case 'gcat': view.gidsCat = t.dataset.id; $('#gids-list').innerHTML = gidsList();
       document.querySelectorAll('.pill').forEach(p => p.classList.toggle('on', p === t)); break;
     case 'back': history.length > 1 ? history.back() : go('#/gids'); break;
@@ -1087,6 +1084,318 @@ document.addEventListener('load', e => {
 }, true);
 
 window.addEventListener('hashchange', route);
+
+// ---------- Foto vergroten ----------
+// Tik op een foto (of knijp erin met twee vingers) en hij opent schermvullend, zoals in Foto's:
+// knijpen of dubbeltikken om in te zoomen, slepen om rond te kijken, omlaag vegen om te sluiten,
+// opzij vegen voor de volgende foto. Zolang je de vraag nog niet beantwoord hebt staat er geen naam bij
+// en kun je niet bladeren (andere foto's of de naam zouden het antwoord verraden).
+const Z = { open: false, quiet: 0, list: [], i: 0, s: 1, x: 0, y: 0, op: 1, from: null, ptrs: new Map(), g: null, onClose: null, lastTap: null, tapT: 0 };
+const ZMAX = 5;
+
+function photoItem(sp, i, { named = true, size = 'large' } = {}) {
+  const ph = sp.photos[i % sp.photos.length];
+  return { i, src: img(sp, i, size), hi: img(sp, i, 'original'), r: ph.r || 0, credit: credit(sp, i), name: named ? sp.nl : '', stage: named ? stageOf(sp, i) : '' };
+}
+// Welke foto's horen bij het element waarop getikt is, en wat er na het sluiten moet gebeuren
+function zoomFrom(t, ptrs) {
+  const fig = t.closest('.gallery figure');
+  if (fig) {
+    const sp = BY_ID[location.hash.split('/')[2]];
+    if (!sp) return;
+    const gal = $('#gal');
+    return zoomOpen(sp.photos.map((_, i) => photoItem(sp, i)), +fig.dataset.k, fig, {
+      ptrs, onClose: i => {
+        gal.scrollLeft = i * gal.clientWidth;
+        document.querySelectorAll('#dots i').forEach((d, k) => d.classList.toggle('on', k === i));
+      },
+      source: i => gal.children[i],
+    });
+  }
+  if (!S) return;
+  const st = S.steps[S.i];
+  const pick = t.closest('.pick');
+  if (pick) {
+    const k = [...pick.parentElement.children].indexOf(pick), o = st.opts[k];
+    return zoomOpen([photoItem(o, st.photos[k], { named: !!st.answered })], 0, pick, { ptrs });
+  }
+  const q = t.closest('.q-photo');
+  if (!q) return;
+  const sp = st.sp, cur = +q.dataset.i;
+  const known = !!(st.type === 'intro' || st.answered || st.flipped); // let op: undefined zou de standaard (naam tonen) geven
+  const idx = known ? usable(sp) : [cur];
+  if (!idx.includes(cur)) idx.unshift(cur);
+  zoomOpen(idx.map(i => photoItem(sp, i, { named: known })), idx.indexOf(cur), q, {
+    ptrs,
+    onClose: k => { if (idx[k] !== cur) showQuizPhoto(q, sp, idx[k], idx); if (st.type === 'type' && !st.answered) $('#typed')?.focus({ preventScroll: true }); },
+  });
+}
+function showQuizPhoto(q, sp, i, idx) {
+  if (!q.isConnected) return;
+  q.dataset.i = i;
+  const im = q.querySelector('img.main');
+  im.dataset.r = ratio(sp, i); im.src = img(sp, i); fitImg(im);
+  q.querySelector('.credit').textContent = credit(sp, i);
+  const g = q.querySelector('.stg'); if (g) { g.textContent = stageOf(sp, i); g.hidden = !stageOf(sp, i); }
+  const m = q.querySelector('.more'); if (m) m.textContent = `${idx.indexOf(i) + 1} / ${idx.length}`;
+}
+
+function zoomEl() {
+  let z = $('#zoom');
+  if (z) return z;
+  document.body.insertAdjacentHTML('beforeend', `<div class="zoom" id="zoom" role="dialog" aria-modal="true" aria-label="Vergrote foto" hidden>
+    <div class="z-bg"></div>
+    <img class="z-img" alt="">
+    <div class="z-top"><span class="z-count glass"></span><button class="z-close glass" aria-label="Sluiten">${ICON.close}</button></div>
+    <div class="z-cap"><b class="z-name"></b><span class="z-credit"></span></div>
+  </div>`);
+  z = $('#zoom');
+  z.querySelector('.z-close').addEventListener('click', e => { e.stopPropagation(); zoomClose(); });
+  return z;
+}
+const zImg = () => $('#zoom .z-img');
+const vp = () => ({ w: window.innerWidth, h: window.innerHeight });
+
+// De foto past precies in het scherm (s = 1); maat en plek van de foto zelf
+function zSize() {
+  const it = Z.list[Z.i], im = zImg(), { w, h } = vp();
+  const r = it.r || (im.naturalWidth ? im.naturalWidth / im.naturalHeight : 1.5);
+  const fw = Math.min(w, h * r), fh = fw / r;
+  Object.assign(im.style, { width: `${fw}px`, height: `${fh}px`, left: `${(w - fw) / 2}px`, top: `${(h - fh) / 2}px` });
+  Z.fw = fw; Z.fh = fh;
+}
+function zApply(anim) {
+  const z = $('#zoom'), im = zImg();
+  z.classList.toggle('anim', !!anim);
+  im.style.transform = `translate3d(${Z.x}px, ${Z.y}px, 0) scale(${Z.s})`;
+  z.querySelector('.z-bg').style.opacity = Z.op;
+  z.querySelector('.z-top').style.opacity = z.querySelector('.z-cap').style.opacity = Math.min(1, Z.op * 1.4);
+}
+function zShow() {
+  const it = Z.list[Z.i], z = $('#zoom'), im = zImg();
+  im.src = it.src;
+  im.alt = it.name ? `${it.name}, foto` : 'Foto van de soort';
+  Z.hiDone = false;
+  z.querySelector('.z-count').textContent = `${Z.i + 1} / ${Z.list.length}`;
+  z.querySelector('.z-count').hidden = Z.list.length < 2;
+  z.querySelector('.z-name').textContent = it.name ? `${it.name}${it.stage ? ` · ${it.stage.toLowerCase()}` : ''}` : '';
+  z.querySelector('.z-credit').textContent = it.credit;
+  zSize();
+  // buren alvast laden, dan is vegen vloeiend
+  [Z.i - 1, Z.i + 1].forEach(k => { if (Z.list[k]) new Image().src = Z.list[k].src; });
+}
+// Bij inzoomen de foto in volle grootte ophalen
+function zHi() {
+  const it = Z.list[Z.i];
+  if (Z.hiDone || Z.s < 1.3 || !it.hi) return;
+  Z.hiDone = true;
+  const pre = new Image(), want = Z.i;
+  pre.onload = () => { if (Z.open && Z.i === want) zImg().src = it.hi; };
+  pre.src = it.hi;
+}
+// Waar de foto op de pagina stond, als beginpunt (en eindpunt) van de animatie
+function zFromRect(el) {
+  if (!el?.isConnected) return null;
+  const b = el.getBoundingClientRect(), { w, h } = vp();
+  if (!b.width || b.bottom < 0 || b.top > h) return null;
+  return { s: Math.min(b.width / Z.fw, b.height / Z.fh), x: b.left + b.width / 2 - w / 2, y: b.top + b.height / 2 - h / 2 };
+}
+
+function zoomOpen(list, i, srcEl, { onClose = null, ptrs = null, source = null } = {}) {
+  const z = zoomEl();
+  Object.assign(Z, { open: true, list, i, onClose, source: source || (() => srcEl), ptrs: new Map(), g: null, lastTap: null });
+  z.hidden = false; z.classList.remove('bare');
+  document.documentElement.classList.add('zooming');
+  zShow();
+  const f = zFromRect(srcEl);
+  Object.assign(Z, f ? { s: f.s, x: f.x, y: f.y } : { s: .9, x: 0, y: 0 }, { op: 0 });
+  Z.base = Z.s;
+  zApply(false);
+  z.getBoundingClientRect(); // eerst de beginstand tekenen
+  if (ptrs) { // met twee vingers geopend: de vingers nemen het meteen over
+    ptrs.forEach((v, k) => Z.ptrs.set(k, { ...v }));
+    zPinchStart();
+  } else {
+    Object.assign(Z, { s: 1, x: 0, y: 0, op: 1 });
+    zApply(true);
+  }
+  z.querySelector('.z-close').focus({ preventScroll: true });
+}
+function zoomClose() {
+  if (!Z.open) return;
+  const z = $('#zoom');
+  Z.open = false;
+  Z.quiet = Date.now() + 350;
+  clearTimeout(Z.tapT);
+  Z.onClose?.(Z.i);
+  const f = zFromRect(Z.source(Z.i));
+  Object.assign(Z, f ? { s: f.s, x: f.x, y: f.y } : { s: Z.s * .9, y: Z.y + (Z.y >= 0 ? 60 : -60) }, { op: 0 });
+  zApply(true);
+  z.classList.add('closing');
+  setTimeout(() => { z.hidden = true; z.classList.remove('closing', 'anim'); zImg().removeAttribute('src'); document.documentElement.classList.remove('zooming'); }, 300);
+}
+
+// grenzen: niet verder slepen dan de rand van de vergrote foto
+function zBounds(s = Z.s) {
+  const { w, h } = vp();
+  return { x: Math.max(0, (Z.fw * s - w) / 2), y: Math.max(0, (Z.fh * s - h) / 2) };
+}
+const clamp = (v, m) => Math.max(-m, Math.min(m, v));
+const rubber = (v, m) => Math.abs(v) <= m ? v : Math.sign(v) * (m + (Math.abs(v) - m) * .35);
+function zSettle() {
+  if (Z.s < 1) Object.assign(Z, { s: 1, x: 0, y: 0 });
+  if (Z.s > ZMAX) Z.s = ZMAX;
+  const b = zBounds();
+  Z.x = clamp(Z.x, b.x); Z.y = clamp(Z.y, b.y); Z.op = 1;
+  zApply(true);
+  zHi();
+}
+// zoom naar schaal s, met punt (px, py) van het scherm als middelpunt
+function zZoomAt(s, px, py) {
+  const { w, h } = vp();
+  const ux = (px - w / 2 - Z.x) / Z.s, uy = (py - h / 2 - Z.y) / Z.s;
+  Z.x = px - w / 2 - ux * s; Z.y = py - h / 2 - uy * s; Z.s = s;
+}
+function zPinchStart() {
+  const [a, b] = [...Z.ptrs.values()];
+  Z.g = { type: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, m0: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, s0: Z.s, x0: Z.x, y0: Z.y };
+}
+function zGo(dir) {
+  const { w } = vp(), next = Z.i + dir;
+  if (!Z.list[next]) { Object.assign(Z, { x: 0, y: 0 }); return zApply(true); }
+  Object.assign(Z, { x: -dir * w * 1.05 });
+  zApply(true);
+  setTimeout(() => {
+    if (!Z.open) return;
+    Z.i = next; zShow();
+    Object.assign(Z, { s: 1, x: dir * w * .5, y: 0, op: 1 });
+    zApply(false); zImg().getBoundingClientRect();
+    Z.x = 0; zApply(true);
+  }, 180);
+}
+
+window.addEventListener('pointerdown', e => {
+  if (!Z.open) return trackPinchOpen(e);
+  if (e.target.closest('.z-close')) return;
+  e.preventDefault();
+  Z.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  $('#zoom').classList.remove('anim');
+  if (Z.ptrs.size === 2) { clearTimeout(Z.tapT); zPinchStart(); }
+  else if (Z.ptrs.size === 1) Z.g = { type: 'one', sx: e.clientX, sy: e.clientY, x0: Z.x, y0: Z.y, t: Date.now(), mode: null };
+}, { capture: true, passive: false });
+
+window.addEventListener('pointermove', e => {
+  if (!Z.open) return trackPinchMove(e);
+  const p = Z.ptrs.get(e.pointerId);
+  if (!p) return;
+  p.x = e.clientX; p.y = e.clientY;
+  const g = Z.g;
+  if (!g) return;
+  if (g.type === 'pinch' && Z.ptrs.size >= 2) {
+    const [a, b] = [...Z.ptrs.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y), m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    let s = g.s0 * d / g.d0;
+    if (s > ZMAX) s = ZMAX + (s - ZMAX) * .3;
+    const { w, h } = vp();
+    const ux = (g.m0.x - w / 2 - g.x0) / g.s0, uy = (g.m0.y - h / 2 - g.y0) / g.s0;
+    Object.assign(Z, { s, x: m.x - w / 2 - ux * s, y: m.y - h / 2 - uy * s });
+    // geopend vanuit de pagina: de achtergrond komt mee naarmate de foto groeit
+    Z.op = Z.s >= 1 ? 1 : Math.max(0, Math.min(1, (Z.s - Z.base) / (1 - Z.base || 1)));
+    if (Z.base >= 1) Z.op = Math.min(1, Z.s);
+    return zApply(false);
+  }
+  if (g.type !== 'one') return;
+  const dx = e.clientX - g.sx, dy = e.clientY - g.sy;
+  if (!g.mode) {
+    if (Math.hypot(dx, dy) < 8) return;
+    clearTimeout(Z.tapT);
+    g.mode = Z.s > 1.02 ? 'pan' : Math.abs(dx) > Math.abs(dy) ? (Z.list.length > 1 ? 'swipe' : 'pan') : 'dismiss';
+  }
+  const { h } = vp();
+  if (g.mode === 'pan') {
+    const b = zBounds();
+    Z.x = rubber(g.x0 + dx, b.x); Z.y = rubber(g.y0 + dy, b.y);
+  } else if (g.mode === 'swipe') {
+    const edge = (dx > 0 && Z.i === 0) || (dx < 0 && Z.i === Z.list.length - 1);
+    Z.x = edge ? dx * .3 : dx;
+  } else {
+    Z.y = dy; Z.x = dx * .4;
+    Z.s = Math.max(.75, 1 - Math.abs(dy) / (h * 1.6));
+    Z.op = Math.max(0, 1 - Math.abs(dy) / (h * .45));
+  }
+  zApply(false);
+}, { passive: true });
+
+function zUp(e) {
+  if (!Z.open) return trackPinchEnd(e);
+  if (!Z.ptrs.has(e.pointerId)) return;
+  Z.ptrs.delete(e.pointerId);
+  const g = Z.g;
+  if (g?.type === 'pinch') {
+    if (Z.ptrs.size >= 2) return zPinchStart();
+    if (Z.s < Z.base * .85 && Z.base < 1) return zoomClose(); // geopend met knijpen en weer dichtgeknepen
+    zSettle();
+    const rest = [...Z.ptrs.values()][0];
+    Z.g = rest ? { type: 'one', sx: rest.x, sy: rest.y, x0: Z.x, y0: Z.y, t: Date.now(), mode: 'pan' } : null;
+    return;
+  }
+  if (!g || g.type !== 'one' || Z.ptrs.size) return;
+  Z.g = null;
+  const dx = e.clientX - g.sx, dy = e.clientY - g.sy, dt = Math.max(1, Date.now() - g.t);
+  const { w, h } = vp();
+  if (!g.mode) { // tik
+    const now = Date.now(), pt = { x: e.clientX, y: e.clientY };
+    if (Z.lastTap && now - Z.lastTap.t < 320 && Math.hypot(pt.x - Z.lastTap.x, pt.y - Z.lastTap.y) < 40) {
+      Z.lastTap = null; clearTimeout(Z.tapT);
+      if (Z.s > 1.05) Object.assign(Z, { s: 1, x: 0, y: 0 });
+      else zZoomAt(2.5, pt.x, pt.y);
+      return zSettle();
+    }
+    Z.lastTap = { ...pt, t: now };
+    Z.tapT = setTimeout(() => $('#zoom').classList.toggle('bare'), 320); // enkele tik: knoppen weg of terug
+    return;
+  }
+  if (g.mode === 'dismiss') {
+    if (Math.abs(dy) > h * .14 || Math.abs(dy) / dt > .6) return zoomClose();
+    Object.assign(Z, { s: 1, x: 0, y: 0, op: 1 });
+    return zApply(true);
+  }
+  if (g.mode === 'swipe') {
+    if (Math.abs(dx) > w * .2 || Math.abs(dx) / dt > .5) return zGo(dx < 0 ? 1 : -1);
+    Object.assign(Z, { x: 0 });
+    return zApply(true);
+  }
+  zSettle();
+}
+window.addEventListener('pointerup', zUp, true);
+window.addEventListener('pointercancel', zUp, true);
+window.addEventListener('keydown', e => {
+  if (!Z.open) return;
+  if (e.key === 'Escape') zoomClose();
+  else if (e.key === 'ArrowRight') zGo(1);
+  else if (e.key === 'ArrowLeft') zGo(-1);
+});
+window.addEventListener('resize', () => { if (Z.open) { zSize(); zSettle(); } });
+
+// Met twee vingers in een foto knijpen opent de vergroting meteen, en de vingers zoomen gewoon door.
+// De pagina zelf zoomt nooit mee (dat zou de app uit model trekken).
+const ZOOMABLE = '.q-photo, .pick, .gallery figure';
+const TP = new Map();
+function trackPinchOpen(e) {
+  if (e.pointerType !== 'touch') return;
+  TP.set(e.pointerId, { x: e.clientX, y: e.clientY, el: e.target.closest(ZOOMABLE) });
+  if (TP.size !== 2) return;
+  const [a, b] = [...TP.values()];
+  if (a.el && a.el === b.el) {
+    const ptrs = new Map([...TP].map(([k, v]) => [k, { x: v.x, y: v.y }]));
+    TP.clear();
+    zoomFrom(a.el, ptrs);
+  }
+}
+function trackPinchMove(e) { const p = TP.get(e.pointerId); if (p) { p.x = e.clientX; p.y = e.clientY; } }
+function trackPinchEnd(e) { TP.delete(e.pointerId); }
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick', e => { if (e.target.closest(ZOOMABLE)) e.preventDefault(); });
 
 // ---------- Vers houden ----------
 // Een app op het beginscherm blijft vaak dagen in het geheugen staan. Kom je terug, dan

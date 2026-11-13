@@ -1,5 +1,5 @@
 // Service worker: de app start snel en werkt ook zonder verbinding.
-const V = 21; // ophogen bij elke wijziging (scripts/versie.py doet dit, ook in index.html)
+const V = 22; // ophogen bij elke wijziging (scripts/versie.py doet dit, ook in index.html)
 const VERSION = `natuur-v${V}`;
 const SHELL = ['./', 'index.html', `styles.css?v=${V}`, `app.js?v=${V}`, 'data/species.json', 'data/info.json?v=1', 'manifest.webmanifest', 'icons/icon.svg', 'icons/apple-touch-icon.png'];
 const IMG_CACHE = 'natuur-img-2';
@@ -28,7 +28,8 @@ async function photo(req) {
   try {
     // cache: 'reload' slaat de browsercache over: daar kan dezelfde foto nog zonder CORS-kop in staan
     const res = await fetch(req.url, { mode: 'cors', credentials: 'omit', cache: 'reload' });
-    if (res.ok) { c.put(req.url, res.clone()).then(trim).catch(() => {}); }
+    // foto's in volle grootte (alleen bij inzoomen) niet bewaren: die zijn groot en worden zelden opnieuw bekeken
+    if (res.ok && !/\/original\./.test(req.url)) { c.put(req.url, res.clone()).then(trim).catch(() => {}); }
     return res;
   } catch {
     return fetch(req); // lukt CORS niet, dan gewoon tonen zonder te bewaren
