@@ -29,11 +29,15 @@ SRC = ROOT / "data" / "soorten.txt"
 OUT = ROOT / "data" / "species.json"
 INFO = ROOT / "data" / "info.json"
 CACHE = ROOT / "scripts" / ".cache.json"
-# Per foto-id het levensstadium: "a" = volwassen dier, anders rups/pop/ei/larve/nimf/jong/detail.
-# Met de hand nagekeken voor vlinders, insecten en amfibieën; de app toont bij een soort
-# die je nog leert alleen volwassen dieren.
+# Per foto-id wat erop staat, met de hand nagekeken voor alle categorieën:
+#   "a"       = gewone, goed herkenbare foto (volwassen dier, bloeiende plant, tak met blad, hele paddenstoel)
+#   rups/pop/ei/larve/nimf/jong, boom (hele boom), bloei, vrucht
+#             = herkenbaar maar lastiger; de app toont die pas als je de soort kent, met een label
+#   "detail"  = ongeschikt (los zaadje, los blad, schors, knop, schedel, spoor, nest, witte of afwijkende
+#               exemplaren, silhouet in de verte …); komt niet in de app
 STADIA = json.loads((ROOT / "scripts" / "stadia.json").read_text())
-STADIA_CATS = ("vlinders", "insecten", "amfibieen")
+MIN_GOOD = 4    # minder gewone foto's dan dit: aanvullen met de best gewaardeerde waarnemingen
+MAX_TOTAL = 8   # gewone foto's (hooguit MAX_PHOTOS) plus lastigere
 
 UA = "NatuurTrainer/1.0 (persoonlijke leer-app)"
 NL_PLACE = 7506
@@ -282,6 +286,19 @@ def similar(taxon, by_inat):
     return out
 
 
+def top_photos(taxon):
+    """Eerste foto van de best gewaardeerde, goedgekeurde waarnemingen met een open licentie (NL)."""
+    lic = "cc0,cc-by,cc-by-nc,cc-by-sa,cc-by-nc-sa,cc-by-nd,cc-by-nc-nd"
+    d = get(f"https://api.inaturalist.org/v1/observations?taxon_id={taxon}&place_id={NL_PLACE}&quality_grade=research"
+            f"&photo_license={lic}&order_by=votes&order=desc&per_page=20", soft=True) or {}
+    out = []
+    for o in d.get("results", []):
+        for ph in (o.get("photos") or [])[:1]:
+            if ph.get("license_code"):
+                out.append(ph)
+    return out
+
+
 def main():
     rows = parse()
     print(f"{len(rows)} soorten in bronlijst")
@@ -314,31 +331,38 @@ def main():
     out, used, unknown = [], set(), []
     for sp in rows:
         t = taxa.get(sp["inat"], {})
-        photos = []
-        for tp in t.get("taxon_photos", []):
-            ph = tp.get("photo", {})
-            if not ph.get("license_code") or not ph.get("url"):
+        cands = [(tp.get("photo", {}), False) for tp in t.get("taxon_photos", [])]
+        good = sum(1 for ph, _ in cands if ph.get("license_code") and STADIA.get(str(ph.get("id")), "a") == "a")
+        if good < MIN_GOOD and sp["inat"]:
+            cands += [(ph, True) for ph in top_photos(sp["inat"])]
+        regular, harder, seen = [], [], set()
+        for ph, extra in cands:
+            pid = str(ph.get("id"))
+            if not ph.get("license_code") or "/square." not in (ph.get("url") or "") or pid in seen:
                 continue
-            url = ph["url"]
-            if "/square." not in url:
+            seen.add(pid)
+            stage = STADIA.get(pid)
+            if stage is None:
+                unknown.append(f"{sp['cat']} | {sp['nl']} | {pid} | {ph['url'].replace('/square.', '/small.')}")
+                if extra:
+                    continue  # aanvulfoto's alleen na controle
+            if stage == "detail":
                 continue
             item = {
-                "u": url.replace("/square.", "/{s}."),
+                "u": ph["url"].replace("/square.", "/{s}."),
                 "a": maker(ph.get("attribution") or ""),
                 "l": ph["license_code"].upper(),
             }
             dim = ph.get("original_dimensions") or {}
             if dim.get("width") and dim.get("height"):
                 item["r"] = round(dim["width"] / dim["height"], 2)  # verhouding breedte/hoogte
-            stage = STADIA.get(str(ph.get("id")))
-            if sp["cat"] in STADIA_CATS and stage is None:
-                unknown.append(f"{sp['nl']}: foto {ph.get('id')}")
             if stage and stage != "a":
                 item["st"] = stage
-            photos.append(item)
-            if len(photos) >= MAX_PHOTOS:
-                break
-        photos.sort(key=lambda x: "st" in x)  # volwassen dieren eerst (blijft verder op volgorde)
+                harder.append(item)
+            else:
+                regular.append(item)
+        photos = regular[:MAX_PHOTOS]
+        photos += harder[:MAX_TOTAL - len(photos)]  # gewone foto's eerst, lastigere erachter
         if not photos:
             print(f"  ! geen open foto's voor {sp['nl']} — overgeslagen")
             continue
@@ -382,9 +406,16 @@ def main():
     OUT.write_text(json.dumps({"generated": time.strftime("%Y-%m-%d"), "species": out}, ensure_ascii=False, separators=(",", ":")))
     near = sum(1 for s in out if s["bestObs"] > 0)
     print(f"Klaar: {len(out)} soorten → {OUT.relative_to(ROOT)} ({OUT.stat().st_size // 1024} kB); {near} gezien rond Best")
+    nak = ROOT / "scripts" / ".nakijken.txt"
     if unknown:
-        print("Nog geen stadium bekend (toevoegen aan scripts/stadia.json, nu als volwassen geteld):")
-        print("  " + "\n  ".join(unknown))
+        nak.write_text("\n".join(unknown) + "\n")
+        print(f"{len(unknown)} foto's nog niet nagekeken → {nak.relative_to(ROOT)} (cat | soort | foto-id | url).")
+        print("  Taxonfoto's tellen voorlopig als gewone foto; aanvulfoto's worden pas gebruikt als ze in stadia.json staan.")
+    elif nak.exists():
+        nak.unlink()
+    few = [f"{s['nl']} ({sum(1 for p in s['photos'] if 'st' not in p)})" for s in out if sum(1 for p in s["photos"] if "st" not in p) < 3]
+    if few:
+        print("Weinig gewone foto's:", ", ".join(few))
     nowiki = [s["nl"] for s in out if not s["wiki"]]
     if nowiki:
         print("Zonder Wikipedia-tekst:", ", ".join(nowiki))

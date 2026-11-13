@@ -54,9 +54,10 @@ const img = (sp, i = 0, size = 'large') => sp.photos[i % sp.photos.length].u.rep
 const credit = (sp, i = 0) => { const p = sp.photos[i % sp.photos.length]; return `${p.a}, ${p.l.replace('-', ' ')}`; };
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const today = () => ymd(new Date());
-// Foto's van volwassen dieren (zonder rups, pop, ei, larve). Zolang je een soort nog leert
-// krijg je alleen die te zien; ken je hem (niveau 3+), dan komen de andere stadia erbij.
-const STAGE = { rups: 'Rups', pop: 'Pop', ei: 'Eitjes', larve: 'Larve', nimf: 'Nimf', jong: 'Jong dier', detail: 'Detail' };
+// Gewone foto's (volwassen dier, bloeiende plant, tak met blad, hele paddenstoel). Zolang je een soort
+// nog leert krijg je alleen die te zien; ken je hem (niveau 3+), dan komen de lastigere erbij:
+// rups, pop, ei, jong, hele boom, bloei, vrucht. Ongeschikte foto's staan niet in de gegevens.
+const STAGE = { rups: 'Rups', pop: 'Pop', ei: 'Eitjes', larve: 'Larve', nimf: 'Nimf', jong: 'Jong', detail: 'Detail', boom: 'Hele boom', bloei: 'Bloei', vrucht: 'Vrucht' };
 const stageOf = (sp, i) => STAGE[sp.photos[i % sp.photos.length].st] || '';
 const adults = sp => { const a = sp.photos.map((_, i) => i).filter(i => !sp.photos[i].st); return a.length ? a : sp.photos.map((_, i) => i); };
 // Kies een foto uit de toegestane; ook bij geleerde soorten is het meestal een volwassen dier
