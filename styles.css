@@ -355,11 +355,12 @@ label.row { cursor: pointer; }
 .q-photo.has-pip .cat { display: none; }
 /* vergrootknopje: de hele foto is tikbaar, dit laat zien dat het kan */
 .zbtn { position: absolute; right: 8px; bottom: 8px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--label); }
+.zbtn::before { content: ""; position: absolute; inset: -10px; } /* groter tikvlak dan het rondje */
 .zbtn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
 .pick .zbtn { left: 8px; right: auto; top: 8px; bottom: auto; width: 30px; height: 30px; }
 .pick.show .zbtn { opacity: .9; }
 .q-photo, .pick, .gallery figure { touch-action: pan-x pan-y; }
-.q-photo, .gallery figure, .pick[data-act="zoom"] { cursor: zoom-in; }
+.gallery figure, .pick[data-act="zoom"], .zbtn { cursor: zoom-in; }
 .q-title { flex: none; font: 700 22px/1.2 var(--rounded); letter-spacing: .1px; margin: 2px 4px 0; }
 .q-title small { display: block; font: 400 15px -apple-system, system-ui; font-style: italic; color: var(--label2); margin-top: 3px; letter-spacing: -.2px; }
 

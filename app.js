@@ -732,12 +732,12 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#ask'))
 
 function photo(sp, i, { tag = '', cycle = false } = {}) {
   const more = cycle && usable(sp).length > 1;
-  return `<div class="q-photo" data-act="zoom" data-i="${i}">
+  return `<div class="q-photo" ${more ? 'data-act="cycle"' : ''} data-i="${i}">
     <img class="main" data-r="${ratio(sp, i)}" src="${img(sp, i)}" alt="Foto van de soort">
     ${tag}
     <span class="stg" ${stageOf(sp, i) ? '' : 'hidden'}>${stageOf(sp, i)}</span>
     ${more ? `<span class="more glass">${Math.max(0, usable(sp).indexOf(i)) + 1} / ${usable(sp).length}</span>` : ''}
-    <span class="zbtn glass" aria-hidden="true">${ICON.expand}</span>
+    <button class="zbtn glass" data-act="zoom" aria-label="Foto vergroten">${ICON.expand}</button>
     <div class="credit">${esc(credit(sp, i))}</div></div>`;
 }
 const catTag = sp => `<span class="cat glass">${CAT[sp.cat].name}</span>`;
@@ -887,6 +887,7 @@ function settle(ok, chosen, { skipped = false, near = false } = {}) {
   // na het antwoord mag je in de vergroting door de andere foto's bladeren
   const ph = $('.q-photo');
   const idx = usable(sp);
+  if (ph && idx.length > 1) ph.dataset.act = 'cycle'; // tik op de foto = volgende foto
   if (ph && idx.length > 1 && !ph.querySelector('.more')) {
     ph.insertAdjacentHTML('beforeend', `<span class="more glass">${Math.max(0, idx.indexOf(+ph.dataset.i)) + 1} / ${idx.length}</span>`);
   }
@@ -1037,6 +1038,14 @@ document.addEventListener('click', e => {
     case 'flip': flip(); break;
     case 'self': selfGrade(t.dataset.ok === '1'); break;
     case 'zoom': zoomFrom(t); break;
+    case 'cycle': { // tik op de quizfoto: volgende foto van deze soort (vergroten gaat via het knopje)
+      const sp = S?.steps[S.i]?.sp;
+      if (!sp) break;
+      const idx = usable(sp), cur = +t.dataset.i;
+      if (!idx.includes(cur)) idx.unshift(cur);
+      showQuizPhoto(t, sp, idx[(idx.indexOf(cur) + 1) % idx.length], idx);
+      break;
+    }
     case 'gcat': view.gidsCat = t.dataset.id; $('#gids-list').innerHTML = gidsList();
       document.querySelectorAll('.pill').forEach(p => p.classList.toggle('on', p === t)); break;
     case 'back': history.length > 1 ? history.back() : go('#/gids'); break;
