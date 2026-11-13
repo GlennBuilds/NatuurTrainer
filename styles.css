@@ -538,3 +538,23 @@ html.zooming, html.zooming body { overflow: hidden; }
 .z-credit { font-size: 12px; opacity: .8; letter-spacing: 0; }
 .zoom.bare .z-top, .zoom.bare .z-cap { opacity: 0 !important; pointer-events: none; }
 .zoom.bare .z-top > * { pointer-events: none; }
+
+/* ---------- Ronde stoppen? (actievenster) ---------- */
+.ask { position: fixed; inset: 0; z-index: 90; display: flex; align-items: flex-end; justify-content: center; }
+.ask-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, .38); animation: askFade .25s ease both; }
+.ask-card { position: relative; width: 100%; max-width: 430px; padding: 0 10px calc(var(--safe-b) + 10px); display: grid; gap: 8px; animation: askUp .32s cubic-bezier(.2, .9, .25, 1) both; }
+.ask-box { background: var(--glass-strong); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); border-radius: 18px; overflow: hidden; text-align: center; }
+.ask-box h2 { margin: 0; padding: 16px 20px 3px; font-size: 15px; font-weight: 600; color: var(--label2); letter-spacing: -.1px; }
+.ask-box p { margin: 0; padding: 0 22px 15px; font-size: 13px; line-height: 1.35; color: var(--label2); letter-spacing: -.08px; }
+.ask-stop, .ask-cancel { display: block; width: 100%; min-height: 57px; font-size: 20px; letter-spacing: -.4px; }
+.ask-stop { color: var(--red); border-top: .5px solid var(--sep); }
+.ask-cancel { background: var(--bg2); border-radius: 18px; font-weight: 600; color: var(--blue); }
+@media (prefers-color-scheme: dark) { .ask-cancel { background: #2C2C2E; color: #0A84FF; } .ask-bg { background: rgba(0, 0, 0, .55); } }
+.ask-stop:active, .ask-cancel:active { background: var(--fill2); }
+.ask.out .ask-bg { animation: askFadeOut .2s ease both; }
+.ask.out .ask-card { animation: askDown .2s ease-in both; }
+.ask.out { pointer-events: none; }
+@keyframes askFade { from { opacity: 0; } }
+@keyframes askUp { from { transform: translateY(110%); } }
+@keyframes askFadeOut { to { opacity: 0; } }
+@keyframes askDown { to { transform: translateY(110%); } }

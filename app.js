@@ -686,8 +686,49 @@ function frame(stage, foot = '', { two = false, scroll = false, cls = '' } = {})
     </div>
     <div class="s-body ${scroll ? 'scroll' : ''} ${cls}">${stage}</div>
     <div class="s-foot ${two ? 'two' : ''}">${foot}</div>`;
+  $('#sheet').classList.remove('reading');
   watchPhotos($('#sheet'));
+  // bij een nieuwe soort: zodra je naar "meer info" scrolt, sluit het kruisje eerst die info
+  if (cls === 'intro') $('.s-body').addEventListener('scroll', e => setReading(e.target.scrollTop > 40), { passive: true });
 }
+function setReading(on) {
+  const sh = $('#sheet'), x = sh.querySelector('.s-close');
+  if (sh.classList.contains('reading') === on) return;
+  sh.classList.toggle('reading', on);
+  x?.setAttribute('aria-label', on ? 'Meer info sluiten' : 'Stoppen');
+}
+
+// Stoppen midden in een ronde: eerst vragen, in de stijl van een iOS-actievenster
+function askStop() {
+  // kennismakingen met een nieuwe soort tellen niet als vraag
+  const qs = S.steps.filter(x => x.type !== 'intro'), total = qs.length;
+  const done = S.steps.slice(0, S.i).filter(x => x.type !== 'intro').length + (S.steps[S.i]?.answered ? 1 : 0);
+  const msg = done ? `Je hebt ${done} van de ${total} vragen gedaan. Wat je al beantwoord hebt, blijft bewaard.` : 'Je bent net begonnen. Er gaat niets verloren.';
+  document.body.insertAdjacentHTML('beforeend', `<div class="ask" id="ask" role="alertdialog" aria-modal="true" aria-labelledby="ask-t" aria-describedby="ask-m">
+    <div class="ask-bg" data-ask="no"></div>
+    <div class="ask-card">
+      <div class="ask-box"><h2 id="ask-t">Ronde stoppen?</h2><p id="ask-m">${msg}</p><button class="ask-stop" data-ask="yes">Stop deze ronde</button></div>
+      <button class="ask-cancel" data-ask="no">Ga door met oefenen</button>
+    </div></div>`);
+  const a = $('#ask');
+  a.querySelector('.ask-cancel').focus({ preventScroll: true });
+  a.addEventListener('click', e => {
+    const b = e.target.closest('[data-ask]');
+    if (!b) return;
+    e.stopPropagation();
+    answerAsk(b.dataset.ask === 'yes');
+  });
+}
+function answerAsk(stop) {
+  const a = $('#ask');
+  if (!a || a.classList.contains('out')) return;
+  a.classList.add('out');
+  setTimeout(() => a.remove(), 220);
+  if (stop) return closeSession();
+  const st = S?.steps[S.i];
+  if (st?.type === 'type' && !st.answered) $('#typed')?.focus({ preventScroll: true });
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#ask')) answerAsk(false); });
 
 function photo(sp, i, { tag = '', cycle = false } = {}) {
   const more = cycle && usable(sp).length > 1;
@@ -981,7 +1022,11 @@ document.addEventListener('click', e => {
     case 'start': case 'again': startSession(S?.only ? { only: hardest(10) } : undefined); break;
     case 'start-hard': startSession({ only: hardest(10) }); break;
     case 'export': exportProgress(); break;
-    case 'close': closeSession(); break;
+    case 'close':
+      if (!S || S.i >= S.steps.length) closeSession(); // ronde klaar: gewoon sluiten
+      else if ($('#sheet').classList.contains('reading')) $('.s-body').scrollTo({ top: 0, behavior: 'smooth' });
+      else if (!$('#ask')) askStop();
+      break;
     case 'close-to': e.preventDefault(); { const h = t.getAttribute('href'); closeSession(); setTimeout(() => go(h), 280); } break;
     case 'next': next(); break;
     case 'more': { const b = $('.s-body'); const inf = b.querySelector('.info'); b.scrollTo({ top: inf.getBoundingClientRect().top - b.getBoundingClientRect().top + b.scrollTop + 6, behavior: 'smooth' }); break; }
